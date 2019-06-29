@@ -12,6 +12,9 @@ public class Award {
 	private List caseText;
 	private List arbiOpinionText;
 	private List arbitramentText;
+	
+	public static String RESP_ABSENT_RESULT_TEXT = 
+			"被申请人经合法通知无正当理由未到庭，亦未提交任何书面答辩意见或证据，视为自行放弃抗辩的权利，应自行承担由此引起的法律后果。";
 
 	public Award() {
 
@@ -92,5 +95,4 @@ public class Award {
 	public void setArbitramentText(List arbitramentText) {
 		this.arbitramentText = arbitramentText;
 	}
-
 }
