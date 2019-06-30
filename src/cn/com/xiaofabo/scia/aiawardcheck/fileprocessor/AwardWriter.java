@@ -193,44 +193,47 @@ public class AwardWriter extends DocWriter {
 
 		addNormalTextParagraphs(award.getRoutineText(), 0, 0);
 
+		
+		/* -----------------------------分------割------线----------------------------- */
 		addSubTitle("一、案    情");
 		int caseContentSubSectionIndex = 1;
 
 		addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）申请人的仲裁请求、事实及理由", 0);
 		/// 申请人称
 		addNormalTextParagraph("申请人称：", 0);
-		addNormalTextParagraphs(award.getCaseText(), 0, 1);
+		addNormalTextParagraphs(award.getProposerText(), 0, 1);
 
 		/// 被申请人答辩
-		if (hasReply) {
+		if (award.hasReply()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）被申请人的主要答辩意见", 0);
 			addNormalTextParagraphs(award.getReplyText(), 0, 1);
 		}
 
 		/// 被申请人的仲裁反请求、事实及理由
-		if (hasCounterClaim) {
+		if (award.hasCounterClaim()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）被申请人的仲裁反请求、事实及理由", 0);
 			addNormalTextParagraphs(award.getCounterClaimText(), 0, 1);
 		}
 
 		/// 申请人就反请求的主要答辩意见
-		if (hasCounterCounterClaim) {
+		if (award.hasCounterCounterClaim()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）申请人就反请求的主要答辩意见", 0);
 			addNormalTextParagraphs(award.getCounterCounterClaimText(), 0, 1);
 		}
 
 		/// 申请人代理人的主要意见
-		if (hasProposerAgentClaim) {
+		if (award.hasProposerAgentClaim()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）申请人代理人的主要代理意见", 0);
 			addNormalTextParagraphs(award.getProposerAgentClaimText(), 0, 1);
 		}
 
 		/// 被申请人代理人的主要意见
-		if (hasRespondentAgentClaim) {
+		if (award.hasRespondentAgentClaim()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）被申请人代理人的主要代理意见", 0);
 			addNormalTextParagraphs(award.getRespondentAgentClaimText(), 0, 1);
 		}
 
+		/* -----------------------------分------割------线----------------------------- */
 		/// 仲裁庭意见
 		addSubTitle("二、仲裁庭意见");
 		addNormalTextParagraphs(award.getArbiPreStatementText(), 0, 1);
@@ -242,41 +245,42 @@ public class AwardWriter extends DocWriter {
 		addNormalTextParagraphs(award.getArbiOpFactText(), 0, 1);
 
 		/// 关于本案法律适用问题（涉外案件）
-		if (isForeignCase) {
+		if (award.isForeignCase()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）关于本案法律适用问题（涉外案件）", 0);
 			addNormalTextParagraphs(award.getForeignCaseLawText(), 0, 1);
 		}
 
 		/// 关于本案合同的效力
-		if (hasContractRegulation) {
+		if (award.hasContractRegulation()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）关于本案合同的效力", 0);
 			addNormalTextParagraphs(award.getContractRegulationText(), 0, 1);
 		}
 
 		/// 关于本案的争议焦点
-		if (hasFocus) {
+		if (award.hasFocus()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）关于本案的争议焦点", 0);
 			addNormalTextParagraphs(award.getFocusText(), 0, 1);
 		}
 
 		/// 关于申请人的仲裁请求
-		if (hasRequest) {
+		if (award.hasRequest()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）关于申请人的仲裁请求", 0);
 			addNormalTextParagraphs(award.getRequestText(), 0, 1);
 		}
 
 		/// 关于被申请人的仲裁反请求
-		if (hasCounterRequest) {
+		if (award.hasCounterRequest()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）关于被申请人的仲裁反请求", 0);
 			addNormalTextParagraphs(award.getCounterRequestText(), 0, 1);
 		}
 		
 		/// 被申请人缺席的法律后果
-		if (isRspondentAbsent) {
+		if (award.isRespondentAbsent()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）被申请人缺席的法律后果", 0);
 			addNormalTextParagraphs(Award.RESP_ABSENT_RESULT_TEXT, 0, 1);
 		}
 
+		/* -----------------------------分------割------线----------------------------- */
 		/// 裁决
 		addSubTitle("三、裁决");
 		addNormalTextParagraphs(award.getArbitramentText(), 0, 1);

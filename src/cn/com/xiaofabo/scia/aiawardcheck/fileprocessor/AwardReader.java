@@ -16,6 +16,24 @@ import cn.com.xiaofabo.scia.aiawardcheck.entity.Respondent;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardReader extends DocReader {
+	public static Logger logger = Logger.getLogger(AwardReader.class.getName());
+
+	/// Regular expressions for reading award document
+	private static final String REGEX_CASE_PROPOSER_TEXT_TITLE = "申请人的仲裁请求、事实及理由";
+	private static final String REGEX_CASE_REPLY_TEXT_TITLE = ".*相关被申请人的主要答辩意见";
+	private static final String REGEX_CASE_COUNTER_CLAIM_TEXT_TITLE = "）被申请人的仲裁反请求、事实及理由";
+	private static final String REGEX_CASE_COUNTER_COUNTER_CLAIM_TEXT_TITLE = "）申请人就反请求的主要答辩意见";
+	private static final String REGEX_CASE_PROPOSER_AGENT_TEXT_TITLE = ".*申请人代理人的主要代理意见";
+	private static final String REGEX_CASE_RESPONDENT_AGENT_TEXT_TITLE = ".*被申请人代理人的主要代理意见";
+
+	private static final String REGEX_ARBIOP_FACT_TEXT_TITLE = "仲裁庭认定的事实";
+	private static final String REGEX_ARBIOP_FOREIGN_CASE_TEXT_TITLE = "关于本案法律适用问题";
+	private static final String REGEX_ARBIOP_CONTRACT_REGULATION_TEXT_TITLE = "关于本案合同的效力";
+	private static final String REGEX_ARBIOP_FOCUS_TEXT_TITLE = "关于本案的争议焦点";
+	private static final String REGEX_ARBIOP_REQUEST_TEXT_TITLE = "关于申请人的仲裁请求";
+	private static final String REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE = "关于被申请人的仲裁反请求";
+	private static final String REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE = "被申请人缺席的法律后果";
+
 	private final List<Proposer> proposerList;
 	private final List<Respondent> respondentList;
 
@@ -37,15 +55,15 @@ public class AwardReader extends DocReader {
 		int routineTextLineStart = 0;
 		int routineTextLineEnd = 0;
 		List routineText = new LinkedList<String>();
-		
+
 		int caseTextLineStart = 0;
 		int caseTextLineEnd = 0;
 		List caseText = new LinkedList<String>();
-		
+
 		int arbiOpinionTextLineStart = 0;
 		int arbiOpinionTextLineEnd = 0;
 		List arbiOpinionText = new LinkedList<String>();
-		
+
 		int arbitramentTextLineStart = 0;
 		int arbitramentTextLineEnd = 0;
 		List arbitramentText = new LinkedList<String>();
@@ -80,33 +98,32 @@ public class AwardReader extends DocReader {
 					}
 				}
 			}
-			
-			if (removeAllSpaces(line).contains("二、仲裁庭意见")) {
+
+			if (removeAllSpaces(line).contains("仲裁庭意见")) {
 				caseTextLineEnd = i - 1;
 				arbiOpinionTextLineStart = i + 1;
-				
+
 				for (int index = caseTextLineStart; index < caseTextLineEnd + 1; ++index) {
 					if (!lines[index].isEmpty()) {
 						caseText.add(lines[index]);
 					}
 				}
 			}
-			
+
 			if (removeAllSpaces(line).contains("三、裁决")) {
 				arbiOpinionTextLineEnd = i - 1;
 				arbitramentTextLineStart = i + 1;
-				
-				
+
 				for (int index = arbiOpinionTextLineStart; index < arbiOpinionTextLineEnd + 1; ++index) {
 					if (!lines[index].isEmpty()) {
 						arbiOpinionText.add(lines[index]);
 					}
 				}
 			}
-			
+
 			if (removeAllSpaces(line).contains("（紧接下一页）")) {
 				arbitramentTextLineEnd = i - 1;
-				
+
 				for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
 					if (!lines[index].isEmpty()) {
 						arbitramentText.add(lines[index]);
@@ -115,17 +132,30 @@ public class AwardReader extends DocReader {
 			}
 		}
 		
-		Award arbitration = new Award();
-		arbitration.setDateText(dateText);
-		arbitration.setCaseIdText(caseIdText);
-		arbitration.setProposerList(proposerList);
-		arbitration.setRespondentList(respondentList);
-		arbitration.setRoutineText(routineText);
-		arbitration.setCaseText(caseText);
-		arbitration.setArbiOpinionText(arbiOpinionText);
-		arbitration.setArbitramentText(arbitramentText);
+		if(arbitramentTextLineEnd == 0) {
+			arbitramentTextLineEnd = lines.length - 1;
+			for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
+				if (!lines[index].isEmpty()) {
+					arbitramentText.add(lines[index]);
+				}
+			}
+		}
 
-		return arbitration;
+		Award award = new Award();
+		award.setDateText(dateText);
+		award.setCaseIdText(caseIdText);
+		award.setProposerList(proposerList);
+		award.setRespondentList(respondentList);
+		award.setRoutineText(routineText);
+
+		/// 一、案情
+		award = divideCaseText(award, caseText);
+		/// 二、仲裁庭意见
+		award = divideArbiOpinionText(award, arbiOpinionText);
+		/// 三、裁  决
+		award.setArbitramentText(arbitramentText);
+
+		return award;
 	}
 
 	private void readProAndRes(String[] lines) throws IOException {
@@ -156,10 +186,10 @@ public class AwardReader extends DocReader {
 		}
 
 		if (proposerChunkStartIdx.isEmpty()) {
-			/// Did not find any proposer in routine document!!!
+			logger.warn("Did not find proposer!");
 		}
 		if (respondentChunkStartIdx.isEmpty()) {
-			/// Did not find any respondent in routine document!!!
+			logger.warn("Did not find respondent!");
 		}
 		if (lastIdx == 0) {
 			/// First page in routine document is not correctly formatted!!!
@@ -381,5 +411,175 @@ public class AwardReader extends DocReader {
 			proposerStr = proposerStr.replaceAll("住址", "住址：");
 		}
 		return proposerStr;
+	}
+
+	private Award divideCaseText(Award award, List caseText) {
+		/// Further divide case text
+
+		/// proposerTextStart, replyTextStart, counterClaimTextStart,
+		/// counterCounterClaimTextStart, proposerAgentTextStart,
+		/// respondentAgentTextStart
+		int[] startPos = { 0, 0, 0, 0, 0, 0 };
+
+		/// proposerTextEnd, replyTextEnd, counterClaimTextEnd,
+		/// counterCounterClaimTextEnd, proposerAgentTextEnd, respondentAgentTextEnd
+		int[] endPos = { 0, 0, 0, 0, 0, 0 };
+
+		for (int i = 0; i < caseText.size(); ++i) {
+			String line = (String) caseText.get(i);
+
+			Pattern pattern = Pattern.compile(REGEX_CASE_PROPOSER_TEXT_TITLE);
+			Matcher matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				startPos[0] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_CASE_REPLY_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasReply(true);
+				startPos[1] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_CASE_COUNTER_CLAIM_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasCounterClaim(true);
+				startPos[2] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_CASE_COUNTER_COUNTER_CLAIM_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasCounterCounterClaim(true);
+				startPos[3] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_CASE_PROPOSER_AGENT_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasProposerAgentClaim(true);
+				startPos[4] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_CASE_RESPONDENT_AGENT_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasRespondentAgentClaim(true);
+				startPos[5] = i + 1;
+			}
+		}
+
+		for (int i = 0; i < startPos.length - 1; ++i) {
+			if (startPos[i] == 0) {
+				continue;
+			}
+			int startPosIdx = i + 1;
+			while (startPos[startPosIdx] == 0) {
+				if (startPosIdx == startPos.length - 1) {
+					break;
+				}
+				++startPosIdx;
+			}
+			endPos[i] = startPosIdx == startPos.length - 1 ? caseText.size() : startPos[startPosIdx] - 1;
+		}
+
+		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : caseText.size();
+
+		/// 案情部分
+		award.setProposerText(caseText.subList(startPos[0], endPos[0]));
+		award.setReplyText(caseText.subList(startPos[1], endPos[1]));
+		award.setCounterClaimText(caseText.subList(startPos[2], endPos[2]));
+		award.setCounterCounterClaimText(caseText.subList(startPos[3], endPos[3]));
+		award.setProposerAgentClaimText(caseText.subList(startPos[4], endPos[4]));
+		award.setRespondentAgentClaimText(caseText.subList(startPos[5], endPos[5]));
+		return award;
+	}
+
+	private Award divideArbiOpinionText(Award award, List arbiOpinionText) {
+		/// Further divide arbitration opinion text
+
+		int[] startPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
+		int[] endPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+		for (int i = 0; i < arbiOpinionText.size(); ++i) {
+			String line = (String) arbiOpinionText.get(i);
+
+			startPos[0] = 0;
+
+			Pattern pattern = Pattern.compile(REGEX_ARBIOP_FACT_TEXT_TITLE);
+			Matcher matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				startPos[1] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_ARBIOP_FOREIGN_CASE_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setForeignCase(true);
+				startPos[2] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_ARBIOP_CONTRACT_REGULATION_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasContractRegulation(true);
+				startPos[3] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_ARBIOP_FOCUS_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasFocus(true);
+				startPos[4] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_ARBIOP_REQUEST_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasRequest(true);
+				startPos[5] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasCounterRequest(true);
+				startPos[6] = i + 1;
+			}
+
+			pattern = Pattern.compile(REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setRespondentAbsent(true);
+				startPos[7] = i + 1;
+			}
+		}
+
+		for (int i = 0; i < startPos.length - 1; ++i) {
+			if (startPos[i] == 0) {
+				continue;
+			}
+			int startPosIdx = i + 1;
+			while (startPos[startPosIdx] == 0) {
+				if (startPosIdx == startPos.length - 1) {
+					break;
+				}
+				++startPosIdx;
+			}
+			endPos[i] = startPosIdx == startPos.length - 1 ? arbiOpinionText.size() : startPos[startPosIdx] - 1;
+		}
+
+		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : arbiOpinionText.size();
+		
+		award.setArbiPreStatementText(arbiOpinionText.subList(startPos[0], endPos[0]));
+		award.setArbiOpFactText(arbiOpinionText.subList(startPos[1], endPos[1]));
+		award.setForeignCaseLawText(arbiOpinionText.subList(startPos[2], endPos[2]));
+		award.setContractRegulationText(arbiOpinionText.subList(startPos[3], endPos[3]));
+		award.setFocusText(arbiOpinionText.subList(startPos[4], endPos[4]));
+		award.setRequestText(arbiOpinionText.subList(startPos[5], endPos[5]));
+		award.setCounterRequestText(arbiOpinionText.subList(startPos[6], endPos[6]));
+
+		return award;
 	}
 }
