@@ -1,5 +1,6 @@
 package cn.com.xiaofabo.scia.aiawardcheck.fileprocessor;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -43,9 +44,17 @@ public class AwardReader extends DocReader {
 		respondentList = new LinkedList();
 	}
 
-	public Award buildArbitration(String inputPath) throws IOException {
+	public Award buildAward(String inputPath) throws IOException {
 		readWordFile(inputPath);
+		return buildAward();
+	}
+	
+	public Award buildAward(File inputFile) throws IOException {
+		readWordFile(inputFile);
+		return buildAward();
+	}
 
+	private Award buildAward() throws IOException {
 		String lines[] = docText.split("\\r?\\n");
 		readProAndRes(lines);
 
@@ -131,8 +140,8 @@ public class AwardReader extends DocReader {
 				}
 			}
 		}
-		
-		if(arbitramentTextLineEnd == 0) {
+
+		if (arbitramentTextLineEnd == 0) {
 			arbitramentTextLineEnd = lines.length - 1;
 			for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
 				if (!lines[index].isEmpty()) {
@@ -152,7 +161,7 @@ public class AwardReader extends DocReader {
 		award = divideCaseText(award, caseText);
 		/// 二、仲裁庭意见
 		award = divideArbiOpinionText(award, arbiOpinionText);
-		/// 三、裁  决
+		/// 三、裁 决
 		award.setArbitramentText(arbitramentText);
 
 		return award;
@@ -571,7 +580,7 @@ public class AwardReader extends DocReader {
 		}
 
 		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : arbiOpinionText.size();
-		
+
 		award.setArbiPreStatementText(arbiOpinionText.subList(startPos[0], endPos[0]));
 		award.setArbiOpFactText(arbiOpinionText.subList(startPos[1], endPos[1]));
 		award.setForeignCaseLawText(arbiOpinionText.subList(startPos[2], endPos[2]));

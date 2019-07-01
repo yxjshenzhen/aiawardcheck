@@ -1,5 +1,7 @@
 package cn.com.xiaofabo.scia.aiawardcheck.main;
 
+import java.io.File;
+
 import org.apache.log4j.Logger;
 
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
@@ -11,7 +13,8 @@ public class App {
 	public static void main(String[] args) throws Exception {
 		try {
 			AwardReader arbReader = new AwardReader();
-			Award ab = arbReader.buildArbitration("D:/tmp/sampleinput1.doc");
+			File sampleInput = new File("D:/tmp/sampleinput1.doc");
+			Award ab = arbReader.buildAward(sampleInput);
 			AwardWriter arbWriter = new AwardWriter("D:/tmp/out.docx");
 			logger.debug("Output document generated");
 			arbWriter.generateAwardDoc(ab);

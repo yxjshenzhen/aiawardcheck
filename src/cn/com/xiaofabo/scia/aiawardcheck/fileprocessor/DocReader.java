@@ -1,5 +1,6 @@
 package cn.com.xiaofabo.scia.aiawardcheck.fileprocessor;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +31,19 @@ public class DocReader {
 		} /// Old version word documents
 		catch (Exception e) {
 			doc = new HWPFDocument(new FileInputStream(inputPath));
+			WordExtractor we = new WordExtractor(doc);
+			docText = we.getText();
+		}
+	}
+	
+	public void readWordFile(File inputFile) throws IOException {
+		try {
+			docx = new XWPFDocument(new FileInputStream(inputFile));
+			XWPFWordExtractor we = new XWPFWordExtractor(docx);
+			docText = we.getText();
+		} /// Old version word documents
+		catch (Exception e) {
+			doc = new HWPFDocument(new FileInputStream(inputFile));
 			WordExtractor we = new WordExtractor(doc);
 			docText = we.getText();
 		}
