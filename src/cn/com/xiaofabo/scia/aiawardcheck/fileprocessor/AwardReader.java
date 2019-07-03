@@ -291,29 +291,72 @@ public class AwardReader extends DocReader {
 			String key = proposerPairList.get(i).getKey();
 			String value = proposerPairList.get(i).getValue();
 			String keyNoSpace = removeAllSpaces(key);
+			
+			if(keyNoSpace == null || keyNoSpace.isEmpty()) {
+				continue;
+			}
 
 			if (keyNoSpace.contains("申请人")) {
 				proposer = value;
+				int offset = 1;
+				while((i+offset)<proposerPairList.size() 
+						&& removeAllSpaces(proposerPairList.get(i+offset).getKey()).isEmpty()) {
+					proposer += "\n" + proposerPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 
 			if (keyNoSpace.equals("统一社会信用代码")) {
 				type = "COM";
 				id = value;
+				int offset = 1;
+				while((i+offset)<proposerPairList.size() 
+						&& removeAllSpaces(proposerPairList.get(i+offset).getKey()).isEmpty()) {
+					id += "\n" + proposerPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 
-			if (keyNoSpace.equals("公民身份证号码")) {
+			if (keyNoSpace.equals("公民身份证号码")||keyNoSpace.equals("公民身份号码")) {
 				type = "IND";
 				id = value;
+				int offset = 1;
+				while((i+offset)<proposerPairList.size() 
+						&& removeAllSpaces(proposerPairList.get(i+offset).getKey()).isEmpty()) {
+					id += "\n" + proposerPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 
-			if (keyNoSpace.equals("住址") || keyNoSpace.equals("地址") || keyNoSpace.equals("住所")) {
+			if (keyNoSpace.equals("住址") 
+					|| keyNoSpace.equals("地址") 
+					|| keyNoSpace.equals("住所")
+					|| keyNoSpace.equals("身份证地址")) {
 				address = value;
+				int offset = 1;
+				while((i+offset)<proposerPairList.size() 
+						&& removeAllSpaces(proposerPairList.get(i+offset).getKey()).isEmpty()) {
+					address += "\n" + proposerPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
-			if (keyNoSpace.equals("法定代表人")) {
+			if (keyNoSpace.equals("法定代表人") || keyNoSpace.equals("负责人")) {
 				representative = value;
+				int offset = 1;
+				while((i+offset)<proposerPairList.size() 
+						&& removeAllSpaces(proposerPairList.get(i+offset).getKey()).isEmpty()) {
+					representative += "\n" + proposerPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 			if (keyNoSpace.equals("代理人")) {
 				agency = value;
+				int offset = 1;
+				while((i+offset)<proposerPairList.size() 
+						&& removeAllSpaces(proposerPairList.get(i+offset).getKey()).isEmpty()) {
+					agency += "\n" + proposerPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 			pro.setProposer(proposer);
 			pro.setId(id);
@@ -369,6 +412,10 @@ public class AwardReader extends DocReader {
 			String key = respondentPairList.get(i).getKey();
 			String value = respondentPairList.get(i).getValue();
 			String keyNoSpace = removeAllSpaces(key);
+			
+			if(keyNoSpace == null || keyNoSpace.isEmpty()) {
+				continue;
+			}
 
 			if (keyNoSpace.contains("被申请人")) {
 				respondent = value;
@@ -377,20 +424,54 @@ public class AwardReader extends DocReader {
 			if (keyNoSpace.equals("统一社会信用代码")) {
 				type = "COM";
 				id = value;
+				int offset = 1;
+				while((i+offset)<respondentPairList.size() 
+						&& removeAllSpaces(respondentPairList.get(i+offset).getKey()).isEmpty()) {
+					id += "\n" + respondentPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 
-			if (keyNoSpace.equals("公民身份证号码")) {
+			if (keyNoSpace.equals("公民身份证号码")||keyNoSpace.equals("公民身份号码")) {
 				type = "IND";
 				id = value;
+				int offset = 1;
+				while((i+offset)<respondentPairList.size() 
+						&& removeAllSpaces(respondentPairList.get(i+offset).getKey()).isEmpty()) {
+					id += "\n" + respondentPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
-			if (keyNoSpace.equals("住址") || keyNoSpace.equals("地址") || keyNoSpace.equals("住所")) {
+
+			if (keyNoSpace.equals("住址") 
+					|| keyNoSpace.equals("地址") 
+					|| keyNoSpace.equals("住所")
+					|| keyNoSpace.equals("身份证地址")) {
 				address = value;
+				int offset = 1;
+				while((i+offset)<respondentPairList.size() 
+						&& removeAllSpaces(respondentPairList.get(i+offset).getKey()).isEmpty()) {
+					address += "\n" + respondentPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
-			if (keyNoSpace.equals("法定代表人")) {
+			if (keyNoSpace.equals("法定代表人") || keyNoSpace.equals("负责人")) {
 				representative = value;
+				int offset = 1;
+				while((i+offset)<respondentPairList.size() 
+						&& removeAllSpaces(respondentPairList.get(i+offset).getKey()).isEmpty()) {
+					representative += "\n" + respondentPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 			if (keyNoSpace.equals("代理人")) {
 				agency = value;
+				int offset = 1;
+				while((i+offset)<respondentPairList.size() 
+						&& removeAllSpaces(respondentPairList.get(i+offset).getKey()).isEmpty()) {
+					agency += "\n" + respondentPairList.get(i + offset).getValue();
+					++offset;
+				}
 			}
 			res.setRespondentName(respondent);
 			res.setId(id);

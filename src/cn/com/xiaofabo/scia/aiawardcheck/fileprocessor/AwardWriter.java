@@ -14,6 +14,8 @@ import org.apache.poi.xwpf.usermodel.XWPFFooter;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFStyles;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBody;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocDefaults;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocument1;
@@ -28,11 +30,18 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPrDefault;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSpacing;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyles;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblBorders;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblLayoutType;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblPr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STBorder;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STFldCharType;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STPageOrientation;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STTblLayoutType;
 
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Proposer;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Respondent;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardWriter extends DocWriter {
@@ -155,6 +164,18 @@ public class AwardWriter extends DocWriter {
 		p2r1.setText("裁  决  书");
 		p2r1.addBreak();
 		p2r1.addBreak();
+		
+        for (int i = 0; i < award.getProposerList().size(); ++i) {
+            Proposer pro = (Proposer) award.getProposerList().get(i);
+            addProposerTable(pro, i + 1, award.getProposerList().size());
+            breakLine();
+        }
+
+        for (int i = 0; i < award.getRespondentList().size(); ++i) {
+            Respondent res = (Respondent) award.getRespondentList().get(i);
+            addRespondentTable(res, i + 1, award.getRespondentList().size());
+            breakLine();
+        }
 
 		XWPFParagraph p5 = awardDoc.createParagraph();
 		p5.setAlignment(ParagraphAlignment.CENTER);
@@ -405,6 +426,91 @@ public class AwardWriter extends DocWriter {
 		}
 		pageNumber.setStart(PAGE_NUMBER_START);
 	}
+	
+	private void addProposerTable(Proposer pro, int countPro, int totalCount) {
+        XWPFTable proposerTable = awardDoc.createTable(5, 2);
+        setTableBorderToNone(proposerTable);
+        CTTblLayoutType type = proposerTable.getCTTbl().getTblPr().addNewTblLayout();
+        type.setType(STTblLayoutType.FIXED);
+
+        /// Doesn't seem to have any effect
+        proposerTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
+        proposerTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
+
+        String proKey = "";
+        if (totalCount == 1) {
+            proKey = "申  请  人：";
+        } else {
+            proKey = "第" + numberToCN((char) (countPro + '0')) + "申请人：";
+        }
+        int rowNumber = 0;
+        setTableRowContent(proposerTable.getRow(rowNumber++), proKey, pro.getProposer());
+        setTableRowContent(proposerTable.getRow(rowNumber++), "地      址：", pro.getAddress());
+        String idDesc = pro.getType().equalsIgnoreCase("COM") ? "统一社会信用代码：" : "公民身份证号码：";
+        setTableRowContent(proposerTable.getRow(rowNumber++), idDesc, pro.getId());
+        setTableRowContent(proposerTable.getRow(rowNumber++), "法定代表人：", pro.getRepresentative());
+        setTableRowContent(proposerTable.getRow(rowNumber++), "代  理  人：", pro.getAgency());
+    }
+
+    private void addRespondentTable(Respondent res, int countRes, int totalCount) {
+        XWPFTable respondentTable = awardDoc.createTable(5, 2);
+        setTableBorderToNone(respondentTable);
+        CTTblLayoutType type = respondentTable.getCTTbl().getTblPr().addNewTblLayout();
+        type.setType(STTblLayoutType.FIXED);
+
+        /// Doesn't seem to have any effect
+        respondentTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
+        respondentTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
+
+        String resKey = "";
+        if (totalCount == 1) {
+            resKey = "被申请人：";
+        } else {
+            resKey = "第" + numberToCN((char) (countRes + '0')) + "被申请人：";
+        }
+        int rowNumber = 0;
+        setTableRowContent(respondentTable.getRow(rowNumber++), resKey, res.getRespondentName());
+        setTableRowContent(respondentTable.getRow(rowNumber++), "地      址：", res.getAddress());
+        String idDesc = res.getType().equalsIgnoreCase("COM") ? "统一社会信用代码：" : "公民身份证号码：";
+        setTableRowContent(respondentTable.getRow(rowNumber++), idDesc, res.getId());
+        setTableRowContent(respondentTable.getRow(rowNumber++), "法定代表人：", res.getRepresentative());
+        setTableRowContent(respondentTable.getRow(rowNumber++), "代  理  人：", res.getAgency());
+    }
+    
+    private void setTableBorderToNone(XWPFTable proposerTable) {
+        CTTblPr tblpro;
+        CTTblBorders borders;
+        tblpro = proposerTable.getCTTbl().getTblPr();
+        borders = tblpro.addNewTblBorders();
+        borders.addNewBottom().setVal(STBorder.NONE);
+        borders.addNewLeft().setVal(STBorder.NONE);
+        borders.addNewRight().setVal(STBorder.NONE);
+        borders.addNewTop().setVal(STBorder.NONE);
+        borders.addNewInsideH().setVal(STBorder.NONE);
+        borders.addNewInsideV().setVal(STBorder.NONE);
+    }
+
+    private void setTableRowContent(XWPFTableRow tableRow, String key, String value) {
+        XWPFParagraph paragraph;
+        XWPFRun paragraphRun;
+        tableRow.getCell(0).removeParagraph(0);
+        tableRow.getCell(0).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_KEY_WIDTH);
+        paragraph = tableRow.getCell(0).addParagraph();
+        paragraph.setAlignment(ParagraphAlignment.DISTRIBUTE);
+        paragraphRun = paragraph.createRun();
+        paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
+        paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
+        paragraphRun.setText(key);
+
+        tableRow.getCell(1).removeParagraph(0);
+        tableRow.getCell(1).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_VALUE_WIDTH);
+        paragraph = tableRow.getCell(1).addParagraph();
+        paragraph.setAlignment(ParagraphAlignment.LEFT);
+        paragraphRun = paragraph.createRun();
+        paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
+        paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
+        paragraphRun.setText(value);
+    }
 
 	private void breakLine() {
 		XWPFParagraph paragraph = awardDoc.createParagraph();
@@ -420,4 +526,47 @@ public class AwardWriter extends DocWriter {
 		XWPFRun run = paragraph.createRun();
 		run.addBreak(BreakType.PAGE);
 	}
+	
+	public String numberToCN(char number) {
+        if (number > '9' || number < '0') {
+            return null;
+        }
+        String toReturn;
+        switch (number) {
+            case '0':
+                toReturn = "○";
+                break;
+            case '1':
+                toReturn = "一";
+                break;
+            case '2':
+                toReturn = "二";
+                break;
+            case '3':
+                toReturn = "三";
+                break;
+            case '4':
+                toReturn = "四";
+                break;
+            case '5':
+                toReturn = "五";
+                break;
+            case '6':
+                toReturn = "六";
+                break;
+            case '7':
+                toReturn = "七";
+                break;
+            case '8':
+                toReturn = "八";
+                break;
+            case '9':
+                toReturn = "九";
+                break;
+            default:
+                toReturn = "X";
+                break;
+        }
+        return toReturn;
+    }
 }
