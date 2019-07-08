@@ -25,7 +25,7 @@ import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
 import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardReader;
 import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardWriter;
 
-@Path("/checkservice")
+@Path("/formatcheckservice")
 public class RestService {
 
 	@POST
@@ -35,8 +35,8 @@ public class RestService {
 		File file = null;
 		try {
 
-			String uploadedFileURL = "d://tmp//uploadedFile.docx";
-			String outputFilePath = "d://tmp//";
+			String uploadedFileURL = "C://temp//uploadedFile.docx";
+			String outputFilePath = "C://temp//";
 			String outputFileName = "output.docx";
 			String outputFileURL = outputFilePath + outputFileName;
 

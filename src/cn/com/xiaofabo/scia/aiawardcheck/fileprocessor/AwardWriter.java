@@ -40,8 +40,8 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.STPageOrientation;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STTblLayoutType;
 
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Proposer;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Respondent;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardWriter extends DocWriter {
@@ -164,16 +164,10 @@ public class AwardWriter extends DocWriter {
 		p2r1.setText("裁  决  书");
 		p2r1.addBreak();
 		p2r1.addBreak();
-		
-        for (int i = 0; i < award.getProposerList().size(); ++i) {
-            Proposer pro = (Proposer) award.getProposerList().get(i);
-            addProposerTable(pro, i + 1, award.getProposerList().size());
-            breakLine();
-        }
-
-        for (int i = 0; i < award.getRespondentList().size(); ++i) {
-            Respondent res = (Respondent) award.getRespondentList().get(i);
-            addRespondentTable(res, i + 1, award.getRespondentList().size());
+        
+        for (int i = 0; i < award.getPartyList().size(); ++i) {
+        	Party party = (Party)award.getPartyList().get(i);
+        	addPartyTable(party, i + 1, award.getPartyList().size());
             breakLine();
         }
 
@@ -221,7 +215,7 @@ public class AwardWriter extends DocWriter {
 
 		addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）申请人的仲裁请求、事实及理由", 0);
 		/// 申请人称
-		addNormalTextParagraph("申请人称：", 0);
+//		addNormalTextParagraph("申请人称：", 0);
 		addNormalTextParagraphs(award.getProposerText(), 0, 1);
 
 		/// 被申请人答辩
@@ -427,55 +421,21 @@ public class AwardWriter extends DocWriter {
 		pageNumber.setStart(PAGE_NUMBER_START);
 	}
 	
-	private void addProposerTable(Proposer pro, int countPro, int totalCount) {
-        XWPFTable proposerTable = awardDoc.createTable(5, 2);
-        setTableBorderToNone(proposerTable);
-        CTTblLayoutType type = proposerTable.getCTTbl().getTblPr().addNewTblLayout();
+	private void addPartyTable(Party party, int countParty, int totalCount) {
+		XWPFTable partyTable = awardDoc.createTable(5, 2);
+        setTableBorderToNone(partyTable);
+        CTTblLayoutType type = partyTable.getCTTbl().getTblPr().addNewTblLayout();
         type.setType(STTblLayoutType.FIXED);
-
-        /// Doesn't seem to have any effect
-        proposerTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
-        proposerTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
-
-        String proKey = "";
-        if (totalCount == 1) {
-            proKey = "申  请  人：";
-        } else {
-            proKey = "第" + numberToCN((char) (countPro + '0')) + "申请人：";
-        }
+      /// Doesn't seem to have any effect
+        partyTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
+        partyTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
+        
         int rowNumber = 0;
-        setTableRowContent(proposerTable.getRow(rowNumber++), proKey, pro.getProposer());
-        setTableRowContent(proposerTable.getRow(rowNumber++), "地      址：", pro.getAddress());
-        String idDesc = pro.getType().equalsIgnoreCase("COM") ? "统一社会信用代码：" : "公民身份证号码：";
-        setTableRowContent(proposerTable.getRow(rowNumber++), idDesc, pro.getId());
-        setTableRowContent(proposerTable.getRow(rowNumber++), "法定代表人：", pro.getRepresentative());
-        setTableRowContent(proposerTable.getRow(rowNumber++), "代  理  人：", pro.getAgency());
-    }
-
-    private void addRespondentTable(Respondent res, int countRes, int totalCount) {
-        XWPFTable respondentTable = awardDoc.createTable(5, 2);
-        setTableBorderToNone(respondentTable);
-        CTTblLayoutType type = respondentTable.getCTTbl().getTblPr().addNewTblLayout();
-        type.setType(STTblLayoutType.FIXED);
-
-        /// Doesn't seem to have any effect
-        respondentTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
-        respondentTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
-
-        String resKey = "";
-        if (totalCount == 1) {
-            resKey = "被申请人：";
-        } else {
-            resKey = "第" + numberToCN((char) (countRes + '0')) + "被申请人：";
+        for(int i = 0; i < party.getPropertyList().size(); ++i) {
+        	Pair property = party.getProperty(i);
+        	setTableRowContent(partyTable.getRow(rowNumber++), property.getKey()+"：", property.getValue());
         }
-        int rowNumber = 0;
-        setTableRowContent(respondentTable.getRow(rowNumber++), resKey, res.getRespondentName());
-        setTableRowContent(respondentTable.getRow(rowNumber++), "地      址：", res.getAddress());
-        String idDesc = res.getType().equalsIgnoreCase("COM") ? "统一社会信用代码：" : "公民身份证号码：";
-        setTableRowContent(respondentTable.getRow(rowNumber++), idDesc, res.getId());
-        setTableRowContent(respondentTable.getRow(rowNumber++), "法定代表人：", res.getRepresentative());
-        setTableRowContent(respondentTable.getRow(rowNumber++), "代  理  人：", res.getAgency());
-    }
+	}
     
     private void setTableBorderToNone(XWPFTable proposerTable) {
         CTTblPr tblpro;

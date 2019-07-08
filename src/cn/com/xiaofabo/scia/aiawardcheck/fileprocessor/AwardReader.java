@@ -12,14 +12,22 @@ import org.apache.log4j.PropertyConfigurator;
 
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Proposer;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Respondent;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardReader extends DocReader {
 	public static Logger logger = Logger.getLogger(AwardReader.class.getName());
 
 	/// Regular expressions for reading award document
+	private static final String REGEX_ROUTINE_DATE = "\\b.*年.*月.*日";
+	private static final String REGEX_ROUTINE_LOCATION = "深圳";
+	private static final String REGEX_ROUTINE_ID = ".*深国仲裁.*号";
+	private static final String REGEX_ROUTINE_PROPOSER = "^(第.)?申\\s*请\\s*人";
+	private static final String REGEX_ROUTINE_RESPONDER = "^(第.)?被\\s*申\\s*请\\s*人";
+	private static final String REGEX_ROUTINE_PARTY = "^(第.)?被?\\s*申\\s*请\\s*人";
+	private static final String REGEX_ROUTINE_END = "^深\\s*圳$";
+
+	private static final String REGEX_CASE_TITLE = "一、案情";
 	private static final String REGEX_CASE_PROPOSER_TEXT_TITLE = "申请人的仲裁请求、事实及理由";
 	private static final String REGEX_CASE_REPLY_TEXT_TITLE = ".*相关被申请人的主要答辩意见";
 	private static final String REGEX_CASE_COUNTER_CLAIM_TEXT_TITLE = "）被申请人的仲裁反请求、事实及理由";
@@ -27,6 +35,7 @@ public class AwardReader extends DocReader {
 	private static final String REGEX_CASE_PROPOSER_AGENT_TEXT_TITLE = ".*申请人代理人的主要代理意见";
 	private static final String REGEX_CASE_RESPONDENT_AGENT_TEXT_TITLE = ".*被申请人代理人的主要代理意见";
 
+	private static final String REGEX_ARBIOP_TITLE = "仲裁庭意见";
 	private static final String REGEX_ARBIOP_FACT_TEXT_TITLE = "仲裁庭认定的事实";
 	private static final String REGEX_ARBIOP_FOREIGN_CASE_TEXT_TITLE = "关于本案法律适用问题";
 	private static final String REGEX_ARBIOP_CONTRACT_REGULATION_TEXT_TITLE = "关于本案合同的效力";
@@ -35,13 +44,11 @@ public class AwardReader extends DocReader {
 	private static final String REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE = "关于被申请人的仲裁反请求";
 	private static final String REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE = "被申请人缺席的法律后果";
 
-	private final List<Proposer> proposerList;
-	private final List<Respondent> respondentList;
+	private final List<Party> partyList;
 
 	public AwardReader() {
 		super();
-		proposerList = new LinkedList();
-		respondentList = new LinkedList();
+		partyList = new LinkedList<Party>();
 	}
 
 	public Award buildAward(String inputPath) throws IOException {
@@ -56,7 +63,7 @@ public class AwardReader extends DocReader {
 
 	private Award buildAward() throws IOException {
 		String lines[] = docText.split("\\r?\\n");
-		readProAndRes(lines);
+		readParties(lines);
 
 		String dateText = "";
 		String caseIdText = "";
@@ -81,23 +88,23 @@ public class AwardReader extends DocReader {
 		int startLineNum = 0, endLineNum = 0;
 		for (int i = 0; i < lines.length; ++i) {
 			String line = lines[i].trim();
-			if (removeAllSpaces(line).equals("深圳")) {
+			if (removeAllSpaces(line).equals(REGEX_ROUTINE_LOCATION)) {
 				int lineIndex = i;
 				while (lineIndex < lines.length) {
 					String l = lines[lineIndex++];
-					if (removeAllSpaces(l).matches("\\b.*年.*月.*日")) {
+					if (removeAllSpaces(l).matches(REGEX_ROUTINE_DATE)) {
 						dateText = l;
 						break;
 					}
 				}
 			}
 
-			if (line.matches(".*深国仲裁.*号")) {
+			if (line.matches(REGEX_ROUTINE_ID)) {
 				caseIdText = line;
 				routineTextLineStart = i + 1;
 			}
 
-			if (removeAllSpaces(line).contains("一、案情")) {
+			if (removeAllSpaces(line).contains(REGEX_CASE_TITLE)) {
 				routineTextLineEnd = i - 1;
 				caseTextLineStart = i + 1;
 
@@ -108,7 +115,7 @@ public class AwardReader extends DocReader {
 				}
 			}
 
-			if (removeAllSpaces(line).contains("仲裁庭意见")) {
+			if (removeAllSpaces(line).contains(REGEX_ARBIOP_TITLE)) {
 				caseTextLineEnd = i - 1;
 				arbiOpinionTextLineStart = i + 1;
 
@@ -142,7 +149,7 @@ public class AwardReader extends DocReader {
 		}
 
 		if (arbitramentTextLineEnd == 0) {
-			arbitramentTextLineEnd = lines.length - 1;
+			arbitramentTextLineEnd = lines.length - 2;
 			for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
 				if (!lines[index].isEmpty()) {
 					arbitramentText.add(lines[index]);
@@ -153,8 +160,7 @@ public class AwardReader extends DocReader {
 		Award award = new Award();
 		award.setDateText(dateText);
 		award.setCaseIdText(caseIdText);
-		award.setProposerList(proposerList);
-		award.setRespondentList(respondentList);
+		award.setPartyList(partyList);
 		award.setRoutineText(routineText);
 
 		/// 一、案情
@@ -167,225 +173,44 @@ public class AwardReader extends DocReader {
 		return award;
 	}
 
-	private void readProAndRes(String[] lines) throws IOException {
-
-		List<Integer> proposerChunkStartIdx = new LinkedList();
-		List<Integer> respondentChunkStartIdx = new LinkedList();
-
+	private void readParties(String[] lines) {
+		List<Integer> partyChunckStartIdx = new LinkedList();
 		int lastIdx = 0;
-		for (int lineIndex = 0; lineIndex < lines.length; ++lineIndex) {
-			String line = lines[lineIndex].trim();
-			// String compressedLine = removeAllSpaces(line);
-			Pattern pattern = Pattern.compile("^(第.)?申\\s*请\\s*人");
+		for (int i = 0; i < lines.length; ++i) {
+			String line = lines[i].trim();
+			Pattern pattern = Pattern.compile(REGEX_ROUTINE_PARTY);
 			Matcher matcher = pattern.matcher(line);
 			if (matcher.find()) {
-				proposerChunkStartIdx.add(lineIndex);
+				partyChunckStartIdx.add(i);
 			}
-			pattern = Pattern.compile("^(第.)?被\\s*申\\s*请\\s*人");
+			pattern = Pattern.compile(REGEX_ROUTINE_END);
 			matcher = pattern.matcher(line);
 			if (matcher.find()) {
-				respondentChunkStartIdx.add(lineIndex);
-			}
-			pattern = Pattern.compile("^深\\s*圳$");
-			matcher = pattern.matcher(line);
-			if (matcher.find()) {
-				lastIdx = lineIndex;
+				lastIdx = i;
 				break;
 			}
 		}
 
-		if (proposerChunkStartIdx.isEmpty()) {
-			logger.warn("Did not find proposer!");
+		for (int i = 0; i < partyChunckStartIdx.size(); ++i) {
+			int startIdx = partyChunckStartIdx.get(i);
+			int endIdx = (i == partyChunckStartIdx.size() - 1) ? lastIdx : partyChunckStartIdx.get(i + 1) - 1;
+			Party party = new Party();
+			int currentPairIndex = -1;
+			for(int idx = startIdx; idx < endIdx; ++idx) {
+				String line = lines[idx].trim();
+				if (!line.contains("：") && currentPairIndex != -1) {
+					String value = line;
+					party.getProperty(currentPairIndex)
+							.setValue(party.getProperty(currentPairIndex).getValue() + "\n" + value);
+				} else {
+					String key = line.substring(0, line.indexOf("："));
+					String value = line.substring(line.indexOf("：") + 1);
+					party.addProperty(new Pair(key, value));
+					++currentPairIndex;
+				}
+			}
+			partyList.add(party);
 		}
-		if (respondentChunkStartIdx.isEmpty()) {
-			logger.warn("Did not find respondent!");
-		}
-		if (lastIdx == 0) {
-			/// First page in routine document is not correctly formatted!!!
-		}
-
-		List<String> proposerChunk = new LinkedList();
-		List<String> respondentChunk = new LinkedList();
-
-		for (int i = 0; i < proposerChunkStartIdx.size(); ++i) {
-			int startIdx = proposerChunkStartIdx.get(i);
-			int endIdx = 0;
-			if (i != proposerChunkStartIdx.size() - 1) {
-				endIdx = proposerChunkStartIdx.get(i + 1);
-			} else {
-				endIdx = respondentChunkStartIdx.get(0) - 1;
-			}
-			proposerChunk.add(combineLines(lines, startIdx, endIdx));
-		}
-
-		for (int i = 0; i < respondentChunkStartIdx.size(); ++i) {
-			int startIdx = respondentChunkStartIdx.get(i);
-			int endIdx = 0;
-			if (i != respondentChunkStartIdx.size() - 1) {
-				endIdx = respondentChunkStartIdx.get(i + 1);
-			} else {
-				endIdx = lastIdx - 1;
-			}
-			respondentChunk.add(combineLines(lines, startIdx, endIdx));
-		}
-
-		for (int i = 0; i < proposerChunk.size(); ++i) {
-			String pChunk = proposerChunk.get(i);
-			proposerList.add(createProposer(pChunk));
-		}
-
-		for (int i = 0; i < respondentChunk.size(); ++i) {
-			String rChunk = respondentChunk.get(i);
-			respondentList.add(createRespondent(rChunk));
-		}
-
-		/// Error handling
-		if (proposerList.isEmpty()) {
-		}
-		if (respondentList.isEmpty()) {
-		}
-	}
-
-	private Proposer createProposer(String pChunk) {
-		pChunk = pAndrProcess(pChunk);
-		String plines[] = pChunk.split("\\r?\\n");
-		List<Pair> proposerPairList = new LinkedList();
-		int currentPairIndex = -1;
-		for (int pLineIndex = 0; pLineIndex < plines.length; ++pLineIndex) {
-			String rline = plines[pLineIndex].trim();
-			if (!rline.contains("：") && currentPairIndex != -1) {
-				String value = rline;
-				proposerPairList.get(currentPairIndex)
-						.setValue(proposerPairList.get(currentPairIndex).getValue() + "\n" + value);
-			}else {
-				String key = rline.substring(0, rline.indexOf("："));
-				String value = rline.substring(rline.indexOf("：") + 1);
-				proposerPairList.add(new Pair(key, value));
-				++currentPairIndex;
-			}
-		}
-
-		Proposer pro = new Proposer();
-		String proposer = "";
-		String id = "";
-		String address = "";
-		String representative = "";
-		String agency = "";
-		String type = "";
-
-		for (int i = 0; i < proposerPairList.size(); ++i) {
-			String key = proposerPairList.get(i).getKey();
-			String value = proposerPairList.get(i).getValue();
-			String keyNoSpace = removeAllSpaces(key);
-
-			if (keyNoSpace == null || keyNoSpace.isEmpty()) {
-				continue;
-			}
-
-			if (keyNoSpace.contains("申请人")) {
-				proposer = value;
-			}
-
-			if (keyNoSpace.equals("统一社会信用代码")) {
-				type = "COM";
-				id = value;
-			}
-
-			if (keyNoSpace.equals("公民身份证号码") || keyNoSpace.equals("公民身份号码")) {
-				type = "IND";
-				id = value;
-			}
-
-			if (keyNoSpace.equals("住址") || keyNoSpace.equals("地址") || keyNoSpace.equals("住所")
-					|| keyNoSpace.equals("身份证地址")) {
-				address = value;
-			}
-			if (keyNoSpace.equals("法定代表人") || keyNoSpace.equals("负责人")) {
-				representative = value;
-			}
-			if (keyNoSpace.equals("代理人")) {
-				agency = value;
-			}
-			
-		}
-		pro.setProposer(proposer);
-		pro.setId(id);
-		pro.setAddress(address);
-		pro.setRepresentative(representative);
-		pro.setAgency(agency);
-		pro.setType(type);
-		return pro;
-	}
-
-	private Respondent createRespondent(String rChunk) {
-		rChunk = pAndrProcess(rChunk);
-		String rlines[] = rChunk.split("\\r?\\n");
-		List<Pair> respondentPairList = new LinkedList();
-		int currentPairIndex = -1;
-		for (int rLineIndex = 0; rLineIndex < rlines.length; ++rLineIndex) {
-			String rline = rlines[rLineIndex].trim();
-			if (!rline.contains("：") && currentPairIndex != -1) {
-				String value = rline;
-				respondentPairList.get(currentPairIndex)
-						.setValue(respondentPairList.get(currentPairIndex).getValue() + "\n" + value);
-			}else {
-				String key = rline.substring(0, rline.indexOf("："));
-				String value = rline.substring(rline.indexOf("：") + 1);
-				respondentPairList.add(new Pair(key, value));
-				++currentPairIndex;
-			}
-		}
-
-		Respondent res = new Respondent();
-		String respondent = "";
-		String id = "";
-		String address = "";
-		String representative = "";
-		String agency = "";
-		String type = "";
-		for (int i = 0; i < respondentPairList.size(); ++i) {
-			String key = respondentPairList.get(i).getKey();
-			String value = respondentPairList.get(i).getValue();
-			String keyNoSpace = removeAllSpaces(key);
-
-			if (keyNoSpace == null || keyNoSpace.isEmpty()) {
-				continue;
-			}
-
-			if (keyNoSpace.contains("被申请人")) {
-				respondent = value;
-			}
-
-			if (keyNoSpace.equals("统一社会信用代码")) {
-				type = "COM";
-				id = value;
-			}
-
-			if (keyNoSpace.equals("公民身份证号码") || keyNoSpace.equals("公民身份号码")) {
-				type = "IND";
-				id = value;
-			}
-
-			if (keyNoSpace.equals("住址") || keyNoSpace.equals("地址") || keyNoSpace.equals("住所")
-					|| keyNoSpace.equals("身份证地址")) {
-				address = value;
-			}
-			if (keyNoSpace.equals("法定代表人") || keyNoSpace.equals("负责人")) {
-				representative = value;
-			}
-			if (keyNoSpace.equals("代理人")) {
-				agency = value;
-			}
-		}
-		
-		res.setRespondentName(respondent);
-		res.setId(id);
-		res.setAddress(address);
-		res.setRepresentative(representative);
-		res.setAgency(agency);
-		res.setType(type);
-
-		return res;
 	}
 
 	private String pAndrProcess(String proposerStr) {

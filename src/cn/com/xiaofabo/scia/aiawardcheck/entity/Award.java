@@ -6,8 +6,7 @@ public class Award {
 	private String id;
 	private String dateText;
 	private String caseIdText;
-	private List proposerList;
-	private List respondentList;
+	private List partyList;
 	private List routineText;
 	private List caseText;
 	private List arbiOpinionText;
@@ -19,7 +18,7 @@ public class Award {
 	private boolean hasCounterCounterClaim;
 	private boolean hasProposerAgentClaim;
 	private boolean hasRespondentAgentClaim;
-	
+
 	/// 仲裁庭意见
 	private boolean isForeignCase;
 	private boolean hasContractRegulation;
@@ -35,7 +34,7 @@ public class Award {
 	private List counterCounterClaimText;
 	private List proposerAgentClaimText;
 	private List respondentAgentClaimText;
-	
+
 	/// 仲裁庭意见
 	private List arbiPreStatementText;
 	private List arbiOpFactText;
@@ -54,7 +53,7 @@ public class Award {
 		hasCounterCounterClaim = false;
 		hasProposerAgentClaim = false;
 		hasRespondentAgentClaim = false;
-		
+
 		isForeignCase = false;
 		hasContractRegulation = false;
 		hasFocus = false;
@@ -91,20 +90,12 @@ public class Award {
 		this.caseIdText = caseIdText;
 	}
 
-	public List getProposerList() {
-		return proposerList;
+	public List getPartyList() {
+		return partyList;
 	}
 
-	public void setProposerList(List proposerList) {
-		this.proposerList = proposerList;
-	}
-
-	public List getRespondentList() {
-		return respondentList;
-	}
-
-	public void setRespondentList(List respondentList) {
-		this.respondentList = respondentList;
+	public void setPartyList(List partyList) {
+		this.partyList = partyList;
 	}
 
 	public List getRoutineText() {
@@ -140,7 +131,7 @@ public class Award {
 	}
 
 	/* -----------------------------分------割------线----------------------------- */
-	
+
 	public boolean hasReply() {
 		return hasReply;
 	}
@@ -180,7 +171,6 @@ public class Award {
 	public void setHasRespondentAgentClaim(boolean hasRespondentAgentClaim) {
 		this.hasRespondentAgentClaim = hasRespondentAgentClaim;
 	}
-	
 
 	public boolean isForeignCase() {
 		return isForeignCase;
