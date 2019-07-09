@@ -1,32 +1,35 @@
 package cn.com.xiaofabo.scia.aiawardcheck.service;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
+import com.sun.jersey.multipart.FormDataParam;
+import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardReader;
+import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardWriter;
+import org.apache.log4j.Logger;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-
-import com.sun.jersey.core.header.FormDataContentDisposition;
-import com.sun.jersey.multipart.FormDataParam;
-
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
-import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardReader;
-import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardWriter;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 @Path("/formatcheckservice")
 public class RestService {
+
+	public static Logger logger = Logger.getLogger(RestService.class.getName());
+	public static void main(String[] args) throws Exception {
+		try {
+			AwardReader arbReader = new AwardReader();
+			File sampleInput = new File("E:/sampleinput.doc");
+			Award ab = arbReader.buildAward(sampleInput);
+			AwardWriter arbWriter = new AwardWriter("E:/out.docx");
+			logger.debug("Output document generated");
+			arbWriter.generateAwardDoc(ab);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
@@ -59,7 +62,7 @@ public class RestService {
 						output.write(data);
 						output.flush();
 					} catch (Exception e) {
-						throw new WebApplicationException("File Not Found !!");
+						throw new WebApplicationException(Response.status(404).build());
 					}
 
 				}
@@ -85,7 +88,7 @@ public class RestService {
 					output.write(data);
 					output.flush();
 				} catch (Exception e) {
-					throw new WebApplicationException("File Not Found !!");
+					throw new WebApplicationException(Response.status(404).build());
 				}
 
 			}

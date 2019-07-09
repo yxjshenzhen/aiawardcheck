@@ -1,19 +1,17 @@
 package cn.com.xiaofabo.scia.aiawardcheck.fileprocessor;
 
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
+import org.apache.log4j.Logger;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
-
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardReader extends DocReader {
 	public static Logger logger = Logger.getLogger(AwardReader.class.getName());
@@ -58,6 +56,11 @@ public class AwardReader extends DocReader {
 
 	public Award buildAward(File inputFile) throws IOException {
 		readWordFile(inputFile);
+		return buildAward();
+	}
+
+	public Award buildAward(FileInputStream fileInputStream) throws IOException {
+		readWordFile(fileInputStream);
 		return buildAward();
 	}
 
