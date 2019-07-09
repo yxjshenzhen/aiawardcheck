@@ -6,16 +6,16 @@ import java.util.List;
 public class Party {
 	private List<Pair> propertyList;
 	private String name;
-	
+
 	public Party() {
 		this.propertyList = new LinkedList<Pair>();
 	}
-	
+
 	public Party(String name) {
 		this.name = name;
 		this.propertyList = new LinkedList<Pair>();
 	}
-	
+
 	public List<Pair> getPropertyList() {
 		return propertyList;
 	}
