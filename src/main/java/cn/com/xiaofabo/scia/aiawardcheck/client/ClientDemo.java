@@ -31,7 +31,7 @@ public class ClientDemo {
             // 要上传的文件的路径
             String filePath =new String("E:\\sampleinput.doc");
             // 把一个普通参数和文件上传给下面这个地址 是一个servlet
-            HttpPost httpPost =new HttpPost("http://localhost:8080/formatcheckservice");
+            HttpPost httpPost =new HttpPost("http://203.195.204.51:8080/formatcheckservice");
             // 把文件转换成流对象FileBody
             File file =new File(filePath);
             FileBody bin =new FileBody(file);

@@ -6,7 +6,7 @@
 	<groupId>cn.com.xiaofabo.scia</groupId>
 	<artifactId>aiawardcheck</artifactId>
 	<version>0.9.0-SNAPSHOT</version>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 
 	<name>AIAwardCheck</name>
 

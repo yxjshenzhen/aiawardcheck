@@ -41,7 +41,7 @@ public class RestController {
 
         AwardReader arbReader = new AwardReader();
 
-        String tempFilePath = "E:/temp.doc";
+        String tempFilePath = "C:\\Users\\Administrator\\Desktop\\aiawardcheck\\data\\temp.doc";
         writeToFile(fileInputStream, tempFilePath);
         File tempFile = new File(tempFilePath);
         Award ab = null;
@@ -52,7 +52,7 @@ public class RestController {
             return ApiResult.resultWith(ResultCodeEnum.SYSTEM_READ_FAIL);
         }
 
-        String outPath = "E:/";
+        String outPath = "C:\\Users\\Administrator\\Desktop\\aiawardcheck\\data\\";
         String outFileName = "out.docx";
         String outFileUrl = outPath + outFileName;
 
