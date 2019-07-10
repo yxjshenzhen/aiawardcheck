@@ -1,17 +1,19 @@
 package cn.com.xiaofabo.scia.aiawardcheck.fileprocessor;
 
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
-import org.apache.log4j.Logger;
-
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardReader extends DocReader {
 	public static Logger logger = Logger.getLogger(AwardReader.class.getName());
@@ -26,21 +28,23 @@ public class AwardReader extends DocReader {
 	private static final String REGEX_ROUTINE_END = "^深\\s*圳$";
 
 	private static final String REGEX_CASE_TITLE = "一、案情";
-	private static final String REGEX_CASE_PROPOSER_TEXT_TITLE = "申请人的仲裁请求、事实及理由";
-	private static final String REGEX_CASE_REPLY_TEXT_TITLE = ".*相关被申请人的主要答辩意见";
+	private static final String REGEX_CASE_PROPOSER_TEXT_TITLE = "）申请人的仲裁请求、事实及理由";
+	private static final String REGEX_CASE_REPLY_TEXT_TITLE = ".*被申请人的主要答辩意见";
+	private static final String REGEX_CASE_PROPOSER_EVIDENCE_TEXT_TITLE = "）申请人提交的证据";
+	private static final String REGEX_CASE_RESPONDER_EVIDENCE_TEXT_TITLE = "）被申请人提交的证据";
 	private static final String REGEX_CASE_COUNTER_CLAIM_TEXT_TITLE = "）被申请人的仲裁反请求、事实及理由";
 	private static final String REGEX_CASE_COUNTER_COUNTER_CLAIM_TEXT_TITLE = "）申请人就反请求的主要答辩意见";
-	private static final String REGEX_CASE_PROPOSER_AGENT_TEXT_TITLE = ".*申请人代理人的主要代理意见";
-	private static final String REGEX_CASE_RESPONDENT_AGENT_TEXT_TITLE = ".*被申请人代理人的主要代理意见";
+	private static final String REGEX_CASE_PROPOSER_AGENT_TEXT_TITLE = "）申请人(代理人)?的主要(代理)?意见";
+	private static final String REGEX_CASE_RESPONDENT_AGENT_TEXT_TITLE = "）被申请人(代理人)?的主要(代理)?意见";
 
 	private static final String REGEX_ARBIOP_TITLE = "仲裁庭意见";
-	private static final String REGEX_ARBIOP_FACT_TEXT_TITLE = "仲裁庭认定的事实";
-	private static final String REGEX_ARBIOP_FOREIGN_CASE_TEXT_TITLE = "关于本案法律适用问题";
-	private static final String REGEX_ARBIOP_CONTRACT_REGULATION_TEXT_TITLE = "关于本案合同的效力";
-	private static final String REGEX_ARBIOP_FOCUS_TEXT_TITLE = "关于本案的争议焦点";
-	private static final String REGEX_ARBIOP_REQUEST_TEXT_TITLE = "关于申请人的仲裁请求";
-	private static final String REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE = "关于被申请人的仲裁反请求";
-	private static final String REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE = "被申请人缺席的法律后果";
+	private static final String REGEX_ARBIOP_FACT_TEXT_TITLE = "）仲裁庭.*认定的事实";
+	private static final String REGEX_ARBIOP_FOREIGN_CASE_TEXT_TITLE = "）关于本案法律适用问题";
+	private static final String REGEX_ARBIOP_CONTRACT_REGULATION_TEXT_TITLE = "）关于本案合同的效力";
+	private static final String REGEX_ARBIOP_FOCUS_TEXT_TITLE = "）关于本案的争议焦点";
+	private static final String REGEX_ARBIOP_REQUEST_TEXT_TITLE = "）关于申请人的仲裁请求";
+	private static final String REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE = "）关于被申请人的仲裁反请求";
+	private static final String REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE = "）被申请人缺席的法律后果";
 
 	private final List<Party> partyList;
 
@@ -56,11 +60,6 @@ public class AwardReader extends DocReader {
 
 	public Award buildAward(File inputFile) throws IOException {
 		readWordFile(inputFile);
-		return buildAward();
-	}
-
-	public Award buildAward(FileInputStream fileInputStream) throws IOException {
-		readWordFile(fileInputStream);
 		return buildAward();
 	}
 
@@ -152,7 +151,7 @@ public class AwardReader extends DocReader {
 		}
 
 		if (arbitramentTextLineEnd == 0) {
-			arbitramentTextLineEnd = lines.length - 2;
+			arbitramentTextLineEnd = lines.length - 1;
 			for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
 				if (!lines[index].isEmpty()) {
 					arbitramentText.add(lines[index]);
@@ -199,7 +198,7 @@ public class AwardReader extends DocReader {
 			int endIdx = (i == partyChunckStartIdx.size() - 1) ? lastIdx : partyChunckStartIdx.get(i + 1) - 1;
 			Party party = new Party();
 			int currentPairIndex = -1;
-			for(int idx = startIdx; idx < endIdx; ++idx) {
+			for (int idx = startIdx; idx < endIdx; ++idx) {
 				String line = lines[idx].trim();
 				if (!line.contains("：") && currentPairIndex != -1) {
 					String value = line;
@@ -216,36 +215,20 @@ public class AwardReader extends DocReader {
 		}
 	}
 
-	private String pAndrProcess(String proposerStr) {
-		proposerStr = proposerStr.replaceAll("，", "   ");
-		proposerStr = proposerStr.replaceAll(",", "   ");
-		proposerStr = proposerStr.replaceAll("。", "   ");
-		if (proposerStr.contains("性别") && !proposerStr.contains("性别：")) {
-			proposerStr = proposerStr.replaceAll("性别", "性别：");
-		}
-		if (proposerStr.contains("身份证号码") && !proposerStr.contains("身份证号码：")) {
-			proposerStr = proposerStr.replaceAll("身份证号码", "身份证号码：");
-		}
-		if (proposerStr.contains("身份号码") && !proposerStr.contains("身份号码：")) {
-			proposerStr = proposerStr.replaceAll("身份号码", "身份号码：");
-		}
-		if (proposerStr.contains("住址") && !proposerStr.contains("住址：")) {
-			proposerStr = proposerStr.replaceAll("住址", "住址：");
-		}
-		return proposerStr;
-	}
-
 	private Award divideCaseText(Award award, List caseText) {
 		/// Further divide case text
 
-		/// proposerTextStart, replyTextStart, counterClaimTextStart,
-		/// counterCounterClaimTextStart, proposerAgentTextStart,
-		/// respondentAgentTextStart
-		int[] startPos = { 0, 0, 0, 0, 0, 0 };
+		/// proposer, reply, counterClaim,
+		/// proposerEvidence, respondentEvidence
+		/// counterCounterClaim, proposerAgent,
+		/// respondentAgent
+		int[] startPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-		/// proposerTextEnd, replyTextEnd, counterClaimTextEnd,
-		/// counterCounterClaimTextEnd, proposerAgentTextEnd, respondentAgentTextEnd
-		int[] endPos = { 0, 0, 0, 0, 0, 0 };
+		/// proposer, reply, counterClaim,
+		/// proposerEvidence, respondentEvidence
+		/// counterCounterClaim, proposerAgent,
+		/// respondentAgent
+		int[] endPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 		for (int i = 0; i < caseText.size(); ++i) {
 			String line = (String) caseText.get(i);
@@ -269,26 +252,40 @@ public class AwardReader extends DocReader {
 				award.setHasCounterClaim(true);
 				startPos[2] = i + 1;
 			}
+			
+			pattern = Pattern.compile(REGEX_CASE_PROPOSER_EVIDENCE_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasProposerEvidence(true);
+				startPos[3] = i + 1;
+			}
+			
+			pattern = Pattern.compile(REGEX_CASE_RESPONDER_EVIDENCE_TEXT_TITLE);
+			matcher = pattern.matcher(line);
+			if (matcher.find()) {
+				award.setHasRespondentEvidence(true);
+				startPos[4] = i + 1;
+			}
 
 			pattern = Pattern.compile(REGEX_CASE_COUNTER_COUNTER_CLAIM_TEXT_TITLE);
 			matcher = pattern.matcher(line);
 			if (matcher.find()) {
 				award.setHasCounterCounterClaim(true);
-				startPos[3] = i + 1;
+				startPos[5] = i + 1;
 			}
 
 			pattern = Pattern.compile(REGEX_CASE_PROPOSER_AGENT_TEXT_TITLE);
 			matcher = pattern.matcher(line);
 			if (matcher.find()) {
 				award.setHasProposerAgentClaim(true);
-				startPos[4] = i + 1;
+				startPos[6] = i + 1;
 			}
 
 			pattern = Pattern.compile(REGEX_CASE_RESPONDENT_AGENT_TEXT_TITLE);
 			matcher = pattern.matcher(line);
 			if (matcher.find()) {
 				award.setHasRespondentAgentClaim(true);
-				startPos[5] = i + 1;
+				startPos[7] = i + 1;
 			}
 		}
 
@@ -303,7 +300,7 @@ public class AwardReader extends DocReader {
 				}
 				++startPosIdx;
 			}
-			endPos[i] = startPosIdx == startPos.length - 1 ? caseText.size() : startPos[startPosIdx] - 1;
+			endPos[i] = startPosIdx == startPos.length? caseText.size() : startPos[startPosIdx] - 1;
 		}
 
 		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : caseText.size();
@@ -312,15 +309,18 @@ public class AwardReader extends DocReader {
 		award.setProposerText(caseText.subList(startPos[0], endPos[0]));
 		award.setReplyText(caseText.subList(startPos[1], endPos[1]));
 		award.setCounterClaimText(caseText.subList(startPos[2], endPos[2]));
-		award.setCounterCounterClaimText(caseText.subList(startPos[3], endPos[3]));
-		award.setProposerAgentClaimText(caseText.subList(startPos[4], endPos[4]));
-		award.setRespondentAgentClaimText(caseText.subList(startPos[5], endPos[5]));
+		award.setProposerEvidenceText(caseText.subList(startPos[3], endPos[3]));
+		award.setResponderEvidenceText(caseText.subList(startPos[4], endPos[4]));
+		award.setCounterCounterClaimText(caseText.subList(startPos[5], endPos[5]));
+		award.setProposerAgentClaimText(caseText.subList(startPos[6], endPos[6]));
+		award.setRespondentAgentClaimText(caseText.subList(startPos[7], endPos[7]));
 		return award;
 	}
 
 	private Award divideArbiOpinionText(Award award, List arbiOpinionText) {
 		/// Further divide arbitration opinion text
 
+		
 		int[] startPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
 		int[] endPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -389,7 +389,7 @@ public class AwardReader extends DocReader {
 				}
 				++startPosIdx;
 			}
-			endPos[i] = startPosIdx == startPos.length - 1 ? arbiOpinionText.size() : startPos[startPosIdx] - 1;
+			endPos[i] = startPosIdx == startPos.length? arbiOpinionText.size() : startPos[startPosIdx] - 1;
 		}
 
 		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : arbiOpinionText.size();

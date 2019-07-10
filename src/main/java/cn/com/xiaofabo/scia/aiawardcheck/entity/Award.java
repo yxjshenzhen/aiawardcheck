@@ -15,6 +15,8 @@ public class Award {
 	/// 案情部分
 	private boolean hasReply;
 	private boolean hasCounterClaim;
+	private boolean hasProposerEvidence;
+	private boolean hasRespondentEvidence;
 	private boolean hasCounterCounterClaim;
 	private boolean hasProposerAgentClaim;
 	private boolean hasRespondentAgentClaim;
@@ -31,6 +33,8 @@ public class Award {
 	private List proposerText;
 	private List replyText;
 	private List counterClaimText;
+	private List proposerEvidenceText;
+	private List responderEvidenceText;
 	private List counterCounterClaimText;
 	private List proposerAgentClaimText;
 	private List respondentAgentClaimText;
@@ -50,6 +54,8 @@ public class Award {
 		/// Initialize all possible factors to false
 		hasReply = false;
 		hasCounterClaim = false;
+		hasProposerEvidence = false;
+		hasRespondentEvidence = false;
 		hasCounterCounterClaim = false;
 		hasProposerAgentClaim = false;
 		hasRespondentAgentClaim = false;
@@ -148,6 +154,22 @@ public class Award {
 		this.hasCounterClaim = hasCounterClaim;
 	}
 
+	public boolean hasProposerEvidence() {
+		return hasProposerEvidence;
+	}
+
+	public void setHasProposerEvidence(boolean hasProposerEvidence) {
+		this.hasProposerEvidence = hasProposerEvidence;
+	}
+
+	public boolean hasRespondentEvidence() {
+		return hasRespondentEvidence;
+	}
+
+	public void setHasRespondentEvidence(boolean hasRespondentEvidence) {
+		this.hasRespondentEvidence = hasRespondentEvidence;
+	}
+
 	public boolean hasCounterCounterClaim() {
 		return hasCounterCounterClaim;
 	}
@@ -243,6 +265,22 @@ public class Award {
 
 	public void setCounterClaimText(List counterClaimText) {
 		this.counterClaimText = counterClaimText;
+	}
+
+	public List getProposerEvidenceText() {
+		return proposerEvidenceText;
+	}
+
+	public void setProposerEvidenceText(List proposerEvidenceText) {
+		this.proposerEvidenceText = proposerEvidenceText;
+	}
+
+	public List getResponderEvidenceText() {
+		return responderEvidenceText;
+	}
+
+	public void setResponderEvidenceText(List responderEvidenceText) {
+		this.responderEvidenceText = responderEvidenceText;
 	}
 
 	public List getCounterCounterClaimText() {
