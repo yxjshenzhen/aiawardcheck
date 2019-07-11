@@ -1,17 +1,51 @@
 package cn.com.xiaofabo.scia.aiawardcheck.fileprocessor;
 
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
-import org.apache.poi.wp.usermodel.HeaderFooterType;
-import org.apache.poi.xwpf.usermodel.*;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
-
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.poi.wp.usermodel.HeaderFooterType;
+import org.apache.poi.xwpf.usermodel.BreakType;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFFooter;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFStyles;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBody;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocDefaults;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocument1;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTFonts;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTHpsMeasure;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageMar;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageNumber;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageSz;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPrDefault;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSpacing;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTStyles;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblBorders;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblLayoutType;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblPr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STBorder;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STFldCharType;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STPageOrientation;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STTblLayoutType;
+
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
+import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 
 public class AwardWriter extends DocWriter {
 
@@ -133,12 +167,12 @@ public class AwardWriter extends DocWriter {
 		p2r1.setText("裁  决  书");
 		p2r1.addBreak();
 		p2r1.addBreak();
-        
-        for (int i = 0; i < award.getPartyList().size(); ++i) {
-        	Party party = (Party)award.getPartyList().get(i);
-        	addPartyTable(party, i + 1, award.getPartyList().size());
-            breakLine();
-        }
+
+		for (int i = 0; i < award.getPartyList().size(); ++i) {
+			Party party = (Party) award.getPartyList().get(i);
+			addPartyTable(party, i + 1, award.getPartyList().size());
+			breakLine();
+		}
 
 		XWPFParagraph p5 = awardDoc.createParagraph();
 		p5.setAlignment(ParagraphAlignment.CENTER);
@@ -177,14 +211,13 @@ public class AwardWriter extends DocWriter {
 
 		addNormalTextParagraphs(award.getRoutineText(), 0, 0);
 
-		
 		/* -----------------------------分------割------线----------------------------- */
 		addSubTitle("一、案    情");
 		int caseContentSubSectionIndex = 1;
 
 		addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）申请人的仲裁请求、事实及理由", 0);
 		/// 申请人称
-//		addNormalTextParagraph("申请人称：", 0);
+		// addNormalTextParagraph("申请人称：", 0);
 		addNormalTextParagraphs(award.getProposerText(), 0, 1);
 
 		/// 被申请人答辩
@@ -197,6 +230,18 @@ public class AwardWriter extends DocWriter {
 		if (award.hasCounterClaim()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）被申请人的仲裁反请求、事实及理由", 0);
 			addNormalTextParagraphs(award.getCounterClaimText(), 0, 1);
+		}
+
+		/// 申请人提交的证据
+		if (award.hasProposerEvidence()) {
+			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）申请人提交的证据及被申请人质证意见", 0);
+			addNormalTextParagraphs(award.getProposerEvidenceText(), 0, 1);
+		}
+
+		/// 被申请人提交的证据
+		if (award.hasRespondentEvidence()) {
+			addTitleTextParagraph("（" + DocUtil.numberToCN(caseContentSubSectionIndex++) + "）被申请人提交的证据及申请人质证意见", 0);
+			addNormalTextParagraphs(award.getResponderEvidenceText(), 0, 1);
 		}
 
 		/// 申请人就反请求的主要答辩意见
@@ -257,7 +302,7 @@ public class AwardWriter extends DocWriter {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）关于被申请人的仲裁反请求", 0);
 			addNormalTextParagraphs(award.getCounterRequestText(), 0, 1);
 		}
-		
+
 		/// 被申请人缺席的法律后果
 		if (award.isRespondentAbsent()) {
 			addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）被申请人缺席的法律后果", 0);
@@ -271,6 +316,7 @@ public class AwardWriter extends DocWriter {
 	}
 
 	private void addTextParagraph(String str, int emptyLineAfter, boolean bold) {
+		str = findAndCorrectMoneyFormats(str);
 		XWPFParagraph paragraph = awardDoc.createParagraph();
 
 		CTPPr ppr = paragraph.getCTP().getPPr();
@@ -389,57 +435,57 @@ public class AwardWriter extends DocWriter {
 		}
 		pageNumber.setStart(PAGE_NUMBER_START);
 	}
-	
+
 	private void addPartyTable(Party party, int countParty, int totalCount) {
 		XWPFTable partyTable = awardDoc.createTable(5, 2);
-        setTableBorderToNone(partyTable);
-        CTTblLayoutType type = partyTable.getCTTbl().getTblPr().addNewTblLayout();
-        type.setType(STTblLayoutType.FIXED);
-      /// Doesn't seem to have any effect
-        partyTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
-        partyTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
-        
-        int rowNumber = 0;
-        for(int i = 0; i < party.getPropertyList().size(); ++i) {
-        	Pair property = party.getProperty(i);
-        	setTableRowContent(partyTable.getRow(rowNumber++), property.getKey()+"：", property.getValue());
-        }
+		setTableBorderToNone(partyTable);
+		CTTblLayoutType type = partyTable.getCTTbl().getTblPr().addNewTblLayout();
+		type.setType(STTblLayoutType.FIXED);
+		/// Doesn't seem to have any effect
+		partyTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_KEY_WIDTH);
+		partyTable.getCTTbl().getTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
+
+		int rowNumber = 0;
+		for (int i = 0; i < party.getPropertyList().size(); ++i) {
+			Pair property = party.getProperty(i);
+			setTableRowContent(partyTable.getRow(rowNumber++), property.getKey() + "：", property.getValue());
+		}
 	}
-    
-    private void setTableBorderToNone(XWPFTable proposerTable) {
-        CTTblPr tblpro;
-        CTTblBorders borders;
-        tblpro = proposerTable.getCTTbl().getTblPr();
-        borders = tblpro.addNewTblBorders();
-        borders.addNewBottom().setVal(STBorder.NONE);
-        borders.addNewLeft().setVal(STBorder.NONE);
-        borders.addNewRight().setVal(STBorder.NONE);
-        borders.addNewTop().setVal(STBorder.NONE);
-        borders.addNewInsideH().setVal(STBorder.NONE);
-        borders.addNewInsideV().setVal(STBorder.NONE);
-    }
 
-    private void setTableRowContent(XWPFTableRow tableRow, String key, String value) {
-        XWPFParagraph paragraph;
-        XWPFRun paragraphRun;
-        tableRow.getCell(0).removeParagraph(0);
-        tableRow.getCell(0).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_KEY_WIDTH);
-        paragraph = tableRow.getCell(0).addParagraph();
-        paragraph.setAlignment(ParagraphAlignment.DISTRIBUTE);
-        paragraphRun = paragraph.createRun();
-        paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
-        paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
-        paragraphRun.setText(key);
+	private void setTableBorderToNone(XWPFTable proposerTable) {
+		CTTblPr tblpro;
+		CTTblBorders borders;
+		tblpro = proposerTable.getCTTbl().getTblPr();
+		borders = tblpro.addNewTblBorders();
+		borders.addNewBottom().setVal(STBorder.NONE);
+		borders.addNewLeft().setVal(STBorder.NONE);
+		borders.addNewRight().setVal(STBorder.NONE);
+		borders.addNewTop().setVal(STBorder.NONE);
+		borders.addNewInsideH().setVal(STBorder.NONE);
+		borders.addNewInsideV().setVal(STBorder.NONE);
+	}
 
-        tableRow.getCell(1).removeParagraph(0);
-        tableRow.getCell(1).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_VALUE_WIDTH);
-        paragraph = tableRow.getCell(1).addParagraph();
-        paragraph.setAlignment(ParagraphAlignment.LEFT);
-        paragraphRun = paragraph.createRun();
-        paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
-        paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
-        paragraphRun.setText(value);
-    }
+	private void setTableRowContent(XWPFTableRow tableRow, String key, String value) {
+		XWPFParagraph paragraph;
+		XWPFRun paragraphRun;
+		tableRow.getCell(0).removeParagraph(0);
+		tableRow.getCell(0).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_KEY_WIDTH);
+		paragraph = tableRow.getCell(0).addParagraph();
+		paragraph.setAlignment(ParagraphAlignment.DISTRIBUTE);
+		paragraphRun = paragraph.createRun();
+		paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
+		paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
+		paragraphRun.setText(key);
+
+		tableRow.getCell(1).removeParagraph(0);
+		tableRow.getCell(1).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_VALUE_WIDTH);
+		paragraph = tableRow.getCell(1).addParagraph();
+		paragraph.setAlignment(ParagraphAlignment.LEFT);
+		paragraphRun = paragraph.createRun();
+		paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
+		paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
+		paragraphRun.setText(value);
+	}
 
 	private void breakLine() {
 		XWPFParagraph paragraph = awardDoc.createParagraph();
@@ -455,47 +501,142 @@ public class AwardWriter extends DocWriter {
 		XWPFRun run = paragraph.createRun();
 		run.addBreak(BreakType.PAGE);
 	}
-	
+
 	public String numberToCN(char number) {
-        if (number > '9' || number < '0') {
-            return null;
+		if (number > '9' || number < '0') {
+			return null;
+		}
+		String toReturn;
+		switch (number) {
+		case '0':
+			toReturn = "○";
+			break;
+		case '1':
+			toReturn = "一";
+			break;
+		case '2':
+			toReturn = "二";
+			break;
+		case '3':
+			toReturn = "三";
+			break;
+		case '4':
+			toReturn = "四";
+			break;
+		case '5':
+			toReturn = "五";
+			break;
+		case '6':
+			toReturn = "六";
+			break;
+		case '7':
+			toReturn = "七";
+			break;
+		case '8':
+			toReturn = "八";
+			break;
+		case '9':
+			toReturn = "九";
+			break;
+		default:
+			toReturn = "X";
+			break;
+		}
+		return toReturn;
+	}
+	
+	private String findAndCorrectMoneyFormats(String str) {
+        String toReturn = "";
+        Pattern pattern = Pattern.compile(
+                "(人民币)?[0-9.,，]+(万)?(亿)?元"
+                + "|" + "[0-9.,，]+(万)?(亿)?美元"
+                + "|" + "[0-9.,，]+(万)?(亿)?美金"
+                + "|" + "[0-9.,，]+(万)?(亿)?欧元");
+        Matcher matcher = pattern.matcher(str);
+
+        List<MoneyString> moneyStrList = new LinkedList<>();
+        while (matcher.find()) {
+            String match = matcher.group();
+            int start = matcher.start();
+            int end = matcher.end();
+            while (match.startsWith("，")) {
+                match = match.substring(1);
+                ++start;
+            }
+            moneyStrList.add(new MoneyString(start, end, match));
+//            System.out.println(str.substring(start, end));
         }
-        String toReturn;
-        switch (number) {
-            case '0':
-                toReturn = "○";
-                break;
-            case '1':
-                toReturn = "一";
-                break;
-            case '2':
-                toReturn = "二";
-                break;
-            case '3':
-                toReturn = "三";
-                break;
-            case '4':
-                toReturn = "四";
-                break;
-            case '5':
-                toReturn = "五";
-                break;
-            case '6':
-                toReturn = "六";
-                break;
-            case '7':
-                toReturn = "七";
-                break;
-            case '8':
-                toReturn = "八";
-                break;
-            case '9':
-                toReturn = "九";
-                break;
-            default:
-                toReturn = "X";
-                break;
+
+        for (int i = moneyStrList.size() - 1; i >= 0; --i) {
+            int start = moneyStrList.get(i).getStart();
+            int end = moneyStrList.get(i).getEnd();
+            String moneyStr = moneyStrList.get(i).getMoneyString();
+            StringBuilder tmpStrBuilder = new StringBuilder();
+            tmpStrBuilder.append(moneyStr);
+            tmpStrBuilder.append("->");
+            /// Extract only number part and format it
+            Pattern p = Pattern.compile("[0-9.,，]+");
+            Matcher m = p.matcher(moneyStr);
+            /// Should only be one and only one match!
+            if (m.find()) {
+                String num = m.group();
+                int s = m.start();
+                int e = m.end();
+                moneyStr = replaceStr(moneyStr, s, e, correctNumberFormat(num));
+            }
+            if (moneyStr.matches("[0-9.,，]+(万)?元")) {
+                moneyStr = "人民币" + moneyStr;
+            }
+            str = replaceStr(str, start, end, moneyStr);
+            tmpStrBuilder.append(moneyStr);
         }
-        return toReturn;
+
+        return str;
+    }
+	
+	private class MoneyString {
+
+        private final int start;
+        private final int end;
+        private final String moneyString;
+
+        public MoneyString(int start, int end, String moneyString) {
+            this.start = start;
+            this.end = end;
+            this.moneyString = moneyString;
+        }
+
+        public int getStart() {
+            return start;
+        }
+
+        public int getEnd() {
+            return end;
+        }
+
+        public String getMoneyString() {
+            return moneyString;
+        }
+    }
+	
+	private String correctNumberFormat(String s) {
+        s = removeAllCommas(s);
+        int backIdx = s.contains(".") ? s.indexOf(".") - 1 : s.length() - 1;
+        backIdx -= 3;
+        while (backIdx >= 0) {
+            s = replaceStr(s, backIdx + 1, backIdx + 1, ",");
+            backIdx -= 3;
+        }
+        return s;
+    }
+	
+	private String removeAllCommas(String str) {
+        return str.replaceAll("[,，]", "");
+    }
+	
+	private String replaceStr(String baseStr, int startIdx, int endIdx, String str) {
+        String firstPart = baseStr.substring(0, startIdx);
+        String secondPart = baseStr.substring(endIdx);
+        return firstPart + str + secondPart;
     }
 }
