@@ -7,6 +7,7 @@ import cn.com.xiaofabo.scia.aiawardcheck.common.ResultCodeEnum;
 import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardReader;
 import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardWriter;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +18,12 @@ import java.io.*;
 
 @Controller
 public class RestController {
+
+    @RequestMapping("/hello")
+    @ResponseBody
+    public Object hello(HttpServletRequest request){
+        return "hello AI";
+    }
 
     @RequestMapping("/formatcheckservice")
     @ResponseBody
@@ -41,7 +48,8 @@ public class RestController {
 
         AwardReader arbReader = new AwardReader();
 
-        String tempFilePath = "C:\\Users\\Administrator\\Desktop\\aiawardcheck\\data\\temp.doc";
+        String tempFilePath = ClassUtils.getDefaultClassLoader().getResource("").getPath()+"/temp.doc";
+
         writeToFile(fileInputStream, tempFilePath);
         File tempFile = new File(tempFilePath);
         Award ab = null;
@@ -52,7 +60,7 @@ public class RestController {
             return ApiResult.resultWith(ResultCodeEnum.SYSTEM_READ_FAIL);
         }
 
-        String outPath = "C:\\Users\\Administrator\\Desktop\\aiawardcheck\\data\\";
+        String outPath = ClassUtils.getDefaultClassLoader().getResource("").getPath();
         String outFileName = "out.docx";
         String outFileUrl = outPath + outFileName;
 

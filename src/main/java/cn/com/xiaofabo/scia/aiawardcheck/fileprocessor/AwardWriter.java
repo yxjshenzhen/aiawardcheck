@@ -4,21 +4,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.poi.wp.usermodel.HeaderFooterType;
-import org.apache.poi.xwpf.usermodel.BreakType;
-import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFFooter;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
-import org.apache.poi.xwpf.usermodel.XWPFStyles;
-import org.apache.poi.xwpf.usermodel.XWPFTable;
-import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBody;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocDefaults;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTDocument1;
@@ -209,6 +202,7 @@ public class AwardWriter extends DocWriter {
 		p3r1.setText(award.getCaseIdText());
 		p3r1.addBreak();
 
+		addNormalTextParagraphs(award.getJianjieText(), 0, 0);
 		addNormalTextParagraphs(award.getRoutineText(), 0, 0);
 
 		/* -----------------------------分------割------线----------------------------- */
@@ -271,7 +265,7 @@ public class AwardWriter extends DocWriter {
 
 		/// 仲裁庭查明及认定的事实
 		addTitleTextParagraph("（" + DocUtil.numberToCN(arbiOpSubSectionIndex++) + "）仲裁庭查明及认定的事实", 0);
-		addNormalTextParagraphs(award.getArbiOpFactText(), 0, 1);
+		addNormalTextParagraphs(award.getArbiOpFactText(), 0, 1, ParagraphAlignment.BOTH);
 
 		/// 关于本案法律适用问题（涉外案件）
 		if (award.isForeignCase()) {
@@ -313,6 +307,64 @@ public class AwardWriter extends DocWriter {
 		/// 裁决
 		addSubTitle("三、裁决");
 		addNormalTextParagraphs(award.getArbitramentText(), 0, 1);
+
+		addFootText(award.getFootText());
+	}
+
+	private void addFootText(List<String> list){
+		List<String> newList = new ArrayList();
+		if (list.size() == 2){
+			newList.add("");
+			newList.add("");
+			newList.add(list.get(0));
+			newList.add("");
+			newList.add("");
+			newList.add(list.get(1));
+		}
+
+		XWPFTable partyTable = awardDoc.createTable(7, 2);
+		setTableBorderToNone(partyTable);
+		partyTable.setTableAlignment(TableRowAlign.RIGHT);
+		CTTblLayoutType type = partyTable.getCTTbl().getTblPr().addNewTblLayout();
+		type.setType(STTblLayoutType.AUTOFIT);
+		/// Doesn't seem to have any effect
+		partyTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
+		partyTable.getCTTbl().getTblGrid().addNewGridCol().setW(BigInteger.ZERO);
+
+		int rowNumber = 0;
+		for (int i = 0; i < newList.size(); ++i) {
+			setTableRowContent(partyTable.getRow(rowNumber++), newList.get(i));
+		}
+
+	}
+
+	private void addTextParagraph(String str, int emptyLineAfter, boolean bold, ParagraphAlignment alignment) {
+		str = findAndCorrectMoneyFormats(str);
+		XWPFParagraph paragraph = awardDoc.createParagraph();
+
+		CTPPr ppr = paragraph.getCTP().getPPr();
+		if (ppr == null) {
+			ppr = paragraph.getCTP().addNewPPr();
+		}
+		CTSpacing spacing = ppr.isSetSpacing() ? ppr.getSpacing() : ppr.addNewSpacing();
+		spacing.setBefore(BigInteger.valueOf(0L));
+		spacing.setAfter(BigInteger.valueOf(0L));
+		spacing.setLineRule(STLineSpacingRule.EXACT);
+		spacing.setLine(TEXT_LINE_SPACING);
+
+		paragraph.setAlignment(alignment);
+		paragraph.setFirstLineIndent(CN_FONT_SIZE_SAN * 2 * 20);
+		XWPFRun run = paragraph.createRun();
+		run.setFontFamily(FONT_FAMILY_FANGSONG);
+		run.getCTR().getRPr().getRFonts().setAscii(FONT_FAMILY_TIME_NEW_ROMAN);
+		run.getCTR().getRPr().getRFonts().setHAnsi(FONT_FAMILY_TIME_NEW_ROMAN);
+		run.getCTR().getRPr().getRFonts().setEastAsia(FONT_FAMILY_FANGSONG);
+		run.setFontSize(CN_FONT_SIZE_SAN);
+		run.setBold(bold);
+		run.setText(str);
+		for (int i = 0; i < emptyLineAfter; ++i) {
+			run.addBreak();
+		}
 	}
 
 	private void addTextParagraph(String str, int emptyLineAfter, boolean bold) {
@@ -358,6 +410,19 @@ public class AwardWriter extends DocWriter {
 		}
 		for (int i = 0; i < emptyLineAfter; ++i) {
 			addTextParagraph("", emptyLineAfter - 1, false);
+		}
+	}
+
+	private void addNormalTextParagraphs(List strList, int emptyLineInBetween, int emptyLineAfter,
+										 ParagraphAlignment alignment) {
+		for (int i = 0; i < strList.size(); ++i) {
+			String str = ((String) strList.get(i)).trim();
+			if (str != null && !str.isEmpty()) {
+				addTextParagraph(str, emptyLineInBetween, false, alignment);
+			}
+		}
+		for (int i = 0; i < emptyLineAfter; ++i) {
+			addTextParagraph("", emptyLineAfter - 1, false, alignment);
 		}
 	}
 
@@ -486,6 +551,19 @@ public class AwardWriter extends DocWriter {
 		paragraphRun.setText(value);
 	}
 
+	private void setTableRowContent(XWPFTableRow tableRow, String key) {
+		XWPFParagraph paragraph;
+		XWPFRun paragraphRun;
+		tableRow.getCell(0).removeParagraph(0);
+		tableRow.getCell(0).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_KEY_WIDTH);
+		paragraph = tableRow.getCell(0).addParagraph();
+		paragraph.setAlignment(ParagraphAlignment.LEFT);
+		paragraphRun = paragraph.createRun();
+		paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
+		paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
+		paragraphRun.setText(key);
+	}
+
 	private void breakLine() {
 		XWPFParagraph paragraph = awardDoc.createParagraph();
 		paragraph.setAlignment(ParagraphAlignment.CENTER);
@@ -587,6 +665,7 @@ public class AwardWriter extends DocWriter {
                 moneyStr = "人民币" + moneyStr;
             }
             str = replaceStr(str, start, end, moneyStr);
+            str = str.replaceAll("万元、人民币","万元、");
             tmpStrBuilder.append(moneyStr);
         }
 
