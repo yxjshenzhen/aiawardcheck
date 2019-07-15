@@ -386,7 +386,6 @@ public class AwardWriter extends DocWriter {
 		run.addBreak();
 		run.setText(str);
 		run.addBreak();
-		run.addBreak();
 	}
 
 	private void generateFooter() {

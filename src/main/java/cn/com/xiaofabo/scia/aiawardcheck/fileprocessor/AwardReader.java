@@ -252,14 +252,14 @@ public class AwardReader extends DocReader {
 				award.setHasCounterClaim(true);
 				startPos[2] = i + 1;
 			}
-			
+
 			pattern = Pattern.compile(REGEX_CASE_PROPOSER_EVIDENCE_TEXT_TITLE);
 			matcher = pattern.matcher(line);
 			if (matcher.find()) {
 				award.setHasProposerEvidence(true);
 				startPos[3] = i + 1;
 			}
-			
+
 			pattern = Pattern.compile(REGEX_CASE_RESPONDER_EVIDENCE_TEXT_TITLE);
 			matcher = pattern.matcher(line);
 			if (matcher.find()) {
@@ -294,13 +294,17 @@ public class AwardReader extends DocReader {
 				continue;
 			}
 			int startPosIdx = i + 1;
-			while (startPos[startPosIdx] == 0) {
-				if (startPosIdx == startPos.length - 1) {
-					break;
+			while (startPosIdx < startPos.length) {
+				if (startPos[startPosIdx] == 0) {
+					++startPosIdx;
+					continue;
 				}
-				++startPosIdx;
+				endPos[i] = startPos[startPosIdx++] - 1;
+				break;
 			}
-			endPos[i] = startPosIdx == startPos.length? caseText.size() : startPos[startPosIdx] - 1;
+			if (endPos[i] == 0) {
+				endPos[i] = caseText.size();
+			}
 		}
 
 		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : caseText.size();
@@ -320,7 +324,6 @@ public class AwardReader extends DocReader {
 	private Award divideArbiOpinionText(Award award, List arbiOpinionText) {
 		/// Further divide arbitration opinion text
 
-		
 		int[] startPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
 		int[] endPos = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -379,17 +382,21 @@ public class AwardReader extends DocReader {
 		}
 
 		for (int i = 0; i < startPos.length - 1; ++i) {
-			if (startPos[i] == 0) {
+			if (i != 0 && startPos[i] == 0) {
 				continue;
 			}
 			int startPosIdx = i + 1;
-			while (startPos[startPosIdx] == 0) {
-				if (startPosIdx == startPos.length - 1) {
-					break;
+			while (startPosIdx < startPos.length) {
+				if (startPos[startPosIdx] == 0) {
+					++startPosIdx;
+					continue;
 				}
-				++startPosIdx;
+				endPos[i] = startPos[startPosIdx++] - 1;
+				break;
 			}
-			endPos[i] = startPosIdx == startPos.length? arbiOpinionText.size() : startPos[startPosIdx] - 1;
+			if (endPos[i] == 0) {
+				endPos[i] = arbiOpinionText.size();
+			}
 		}
 
 		endPos[startPos.length - 1] = startPos[startPos.length - 1] == 0 ? 0 : arbiOpinionText.size();
