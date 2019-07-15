@@ -41,7 +41,7 @@ public class RestService {
 			String uploadedFileURL = "C://temp//uploadedFile.docx";
 			String outputFilePath = "C://temp//";
 			String outputFileName = "output.docx";
-			String outputFileURL = outputFilePath + outputFileName;
+			final String outputFileURL = outputFilePath + outputFileName;
 
 			// save it
 			writeToFile(uploadedInputStream, uploadedFileURL);

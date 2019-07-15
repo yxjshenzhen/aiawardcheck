@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import cn.com.xiaofabo.scia.aiawardcheck.util.CommonUtil;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -14,6 +15,7 @@ import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
+import org.springframework.util.StringUtils;
 
 public class AwardReader extends DocReader {
 	public static Logger logger = Logger.getLogger(AwardReader.class.getName());
@@ -26,6 +28,8 @@ public class AwardReader extends DocReader {
 	private static final String REGEX_ROUTINE_RESPONDER = "^(第.)?被\\s*申\\s*请\\s*人";
 	private static final String REGEX_ROUTINE_PARTY = "^(第.)?被?\\s*申\\s*请\\s*人";
 	private static final String REGEX_ROUTINE_END = "^深\\s*圳$";
+
+	private static final String REGEX_JIANJIE_START = "深圳国际仲裁院（";
 
 	private static final String REGEX_CASE_TITLE = "一、案情";
 	private static final String REGEX_CASE_PROPOSER_TEXT_TITLE = "）申请人的仲裁请求、事实及理由";
@@ -45,6 +49,8 @@ public class AwardReader extends DocReader {
 	private static final String REGEX_ARBIOP_REQUEST_TEXT_TITLE = "）关于申请人的仲裁请求";
 	private static final String REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE = "）关于被申请人的仲裁反请求";
 	private static final String REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE = "）被申请人缺席的法律后果";
+
+	private static final String END = "独任仲裁员：";
 
 	private final List<Party> partyList;
 
@@ -70,6 +76,8 @@ public class AwardReader extends DocReader {
 		String dateText = "";
 		String caseIdText = "";
 
+		List jianjieText = new LinkedList<String>();
+
 		int routineTextLineStart = 0;
 		int routineTextLineEnd = 0;
 		List routineText = new LinkedList<String>();
@@ -85,6 +93,8 @@ public class AwardReader extends DocReader {
 		int arbitramentTextLineStart = 0;
 		int arbitramentTextLineEnd = 0;
 		List arbitramentText = new LinkedList<String>();
+
+		List endTable = new LinkedList<String>();
 
 		lines = docText.split("\\r?\\n");
 		int startLineNum = 0, endLineNum = 0;
@@ -105,6 +115,18 @@ public class AwardReader extends DocReader {
 				caseIdText = line;
 				routineTextLineStart = i + 1;
 			}
+
+			if (removeAllSpaces(line).contains(REGEX_JIANJIE_START)) {
+				int lineIndex = i;
+				while (true) {
+					String l = lines[lineIndex++];
+					jianjieText.add(l);
+					if (StringUtils.isEmpty(CommonUtil.replaceBlank(l))) {
+						break;
+					}
+				}
+			}
+
 
 			if (removeAllSpaces(line).contains(REGEX_CASE_TITLE)) {
 				routineTextLineEnd = i - 1;
@@ -139,7 +161,7 @@ public class AwardReader extends DocReader {
 				}
 			}
 
-			if (removeAllSpaces(line).contains("（紧接下一页）")) {
+			if (removeAllSpaces(line).contains(END)) {
 				arbitramentTextLineEnd = i - 1;
 
 				for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
@@ -148,21 +170,32 @@ public class AwardReader extends DocReader {
 					}
 				}
 			}
-		}
 
-		if (arbitramentTextLineEnd == 0) {
-			arbitramentTextLineEnd = lines.length - 1;
-			for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
-				if (!lines[index].isEmpty()) {
-					arbitramentText.add(lines[index]);
+			if (removeAllSpaces(line).contains(END)) {
+				arbitramentTextLineEnd = i - 1;
+
+				for (int index = arbitramentTextLineEnd; index < lines.length ; ++index) {
+					if (!lines[index].isEmpty()) {
+						endTable.add(lines[index]);
+					}
 				}
 			}
 		}
+
+		/*if (arbitramentTextLineEnd == 0) {
+			arbitramentTextLineEnd = lines.length - 1;
+			for (int index = arbitramentTextLineStart; index < arbitramentTextLineEnd + 1; ++index) {
+				if (!StringUtils.isEmpty(CommonUtil.replaceBlank(lines[index]))) {
+					arbitramentText.add(lines[index]);
+				}
+			}
+		}*/
 
 		Award award = new Award();
 		award.setDateText(dateText);
 		award.setCaseIdText(caseIdText);
 		award.setPartyList(partyList);
+		award.setJianjieText(jianjieText);
 		award.setRoutineText(routineText);
 
 		/// 一、案情
@@ -171,6 +204,7 @@ public class AwardReader extends DocReader {
 		award = divideArbiOpinionText(award, arbiOpinionText);
 		/// 三、裁 决
 		award.setArbitramentText(arbitramentText);
+		award.setFootText(endTable);
 
 		return award;
 	}
@@ -202,11 +236,13 @@ public class AwardReader extends DocReader {
 				String line = lines[idx].trim();
 				if (!line.contains("：") && currentPairIndex != -1) {
 					String value = line;
-					party.getProperty(currentPairIndex)
-							.setValue(party.getProperty(currentPairIndex).getValue() + "\n" + value);
+					Pair pair = party.getProperty(currentPairIndex);
+					if (!StringUtils.isEmpty(CommonUtil.replaceBlank(value))){
+						pair.setValue(party.getProperty(currentPairIndex).getValue() + "\n" + value);
+					}
 				} else {
 					String key = line.substring(0, line.indexOf("："));
-					String value = line.substring(line.indexOf("：") + 1);
+					String value = line.substring(line.indexOf("：") + 1) + "\n";
 					party.addProperty(new Pair(key, value));
 					++currentPairIndex;
 				}

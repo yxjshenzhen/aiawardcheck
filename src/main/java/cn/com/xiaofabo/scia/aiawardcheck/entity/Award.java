@@ -7,10 +7,12 @@ public class Award {
 	private String dateText;
 	private String caseIdText;
 	private List partyList;
+	private List jianjieText;
 	private List routineText;
 	private List caseText;
 	private List arbiOpinionText;
 	private List arbitramentText;
+	private List footText;
 
 	/// 案情部分
 	private boolean hasReply;
@@ -104,6 +106,14 @@ public class Award {
 		this.partyList = partyList;
 	}
 
+	public List getJianjieText() {
+		return jianjieText;
+	}
+
+	public void setJianjieText(List jianjieText) {
+		this.jianjieText = jianjieText;
+	}
+
 	public List getRoutineText() {
 		return routineText;
 	}
@@ -134,6 +144,14 @@ public class Award {
 
 	public void setArbitramentText(List arbitramentText) {
 		this.arbitramentText = arbitramentText;
+	}
+
+	public List getFootText() {
+		return footText;
+	}
+
+	public void setFootText(List footText) {
+		this.footText = footText;
 	}
 
 	/* -----------------------------分------割------线----------------------------- */
