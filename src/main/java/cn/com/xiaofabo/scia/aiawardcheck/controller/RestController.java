@@ -6,14 +6,14 @@ import cn.com.xiaofabo.scia.aiawardcheck.common.ApiResult;
 import cn.com.xiaofabo.scia.aiawardcheck.common.ResultCodeEnum;
 import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardReader;
 import cn.com.xiaofabo.scia.aiawardcheck.fileprocessor.AwardWriter;
+import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 
 @Controller
@@ -21,16 +21,13 @@ public class RestController {
 
     @RequestMapping("/hello")
     @ResponseBody
-    public Object hello(HttpServletRequest request){
+    public Object hello(){
         return "hello AI";
     }
 
     @RequestMapping("/formatcheckservice")
     @ResponseBody
-    public Object formatcheck(HttpServletRequest request){
-        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
-
-        MultipartFile file = multipartRequest.getFile("file");
+    public Object formatcheck(@RequestParam("file") MultipartFile file){
         if (file.isEmpty()) {
             return ApiResult.resultWith(ResultCodeEnum.FILE_INPUT_NOT_FOUND);
         }
