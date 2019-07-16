@@ -197,6 +197,9 @@ public class AwardWriter extends DocWriter {
 		p3.setAlignment(ParagraphAlignment.RIGHT);
 		XWPFRun p3r1 = p3.createRun();
 		p3r1.setFontFamily(FONT_FAMILY_FANGSONG);
+		p3r1.getCTR().getRPr().getRFonts().setAscii(FONT_FAMILY_TIME_NEW_ROMAN);
+		p3r1.getCTR().getRPr().getRFonts().setHAnsi(FONT_FAMILY_TIME_NEW_ROMAN);
+		p3r1.getCTR().getRPr().getRFonts().setEastAsia(FONT_FAMILY_FANGSONG);
 		p3r1.setFontSize(CN_FONT_SIZE_SAN);
 		p3r1.addBreak();
 		p3r1.setText(award.getCaseIdText());
@@ -305,37 +308,41 @@ public class AwardWriter extends DocWriter {
 
 		/* -----------------------------分------割------线----------------------------- */
 		/// 裁决
-		addSubTitle("三、裁决");
-		addNormalTextParagraphs(award.getArbitramentText(), 0, 1);
+		addSubTitle("三、裁   决");
+		addNormalTextParagraphs(award.getArbitramentText(), 1, 1);
 
 		addFootText(award.getFootText());
 	}
 
-	private void addFootText(List<String> list){
-		List<String> newList = new ArrayList();
-		if (list.size() == 2){
-			newList.add("");
-			newList.add("");
-			newList.add(list.get(0));
-			newList.add("");
-			newList.add("");
-			newList.add(list.get(1));
+	private void addFootText(List<String> list) {
+		for (int i = 0; i < list.size(); ++i) {
+			XWPFParagraph paragraph = awardDoc.createParagraph();
+			CTPPr ppr = paragraph.getCTP().getPPr();
+			if (ppr == null) {
+				ppr = paragraph.getCTP().addNewPPr();
+			}
+			CTSpacing spacing = ppr.isSetSpacing() ? ppr.getSpacing() : ppr.addNewSpacing();
+			spacing.setBefore(BigInteger.valueOf(0L));
+			spacing.setAfter(BigInteger.valueOf(0L));
+			spacing.setLineRule(STLineSpacingRule.EXACT);
+			spacing.setLine(TEXT_LINE_SPACING);
+
+			if (i == list.size() - 1) {
+				paragraph.setAlignment(ParagraphAlignment.RIGHT);
+			}else {
+				paragraph.setAlignment(ParagraphAlignment.CENTER);
+			}
+			XWPFRun run = paragraph.createRun();
+			run.setFontFamily(FONT_FAMILY_FANGSONG);
+			run.getCTR().getRPr().getRFonts().setAscii(FONT_FAMILY_TIME_NEW_ROMAN);
+			run.getCTR().getRPr().getRFonts().setHAnsi(FONT_FAMILY_TIME_NEW_ROMAN);
+			run.getCTR().getRPr().getRFonts().setEastAsia(FONT_FAMILY_KAITI);
+			run.setFontSize(CN_FONT_SIZE_ER);
+			run.setBold(false);
+			run.setText(list.get(i));
+			run.addBreak();
+			run.addBreak();
 		}
-
-		XWPFTable partyTable = awardDoc.createTable(7, 2);
-		setTableBorderToNone(partyTable);
-		partyTable.setTableAlignment(TableRowAlign.RIGHT);
-		CTTblLayoutType type = partyTable.getCTTbl().getTblPr().addNewTblLayout();
-		type.setType(STTblLayoutType.AUTOFIT);
-		/// Doesn't seem to have any effect
-		partyTable.getCTTbl().addNewTblGrid().addNewGridCol().setW(TABLE_VALUE_WIDTH);
-		partyTable.getCTTbl().getTblGrid().addNewGridCol().setW(BigInteger.ZERO);
-
-		int rowNumber = 0;
-		for (int i = 0; i < newList.size(); ++i) {
-			setTableRowContent(partyTable.getRow(rowNumber++), newList.get(i));
-		}
-
 	}
 
 	private void addTextParagraph(String str, int emptyLineAfter, boolean bold, ParagraphAlignment alignment) {
@@ -414,7 +421,7 @@ public class AwardWriter extends DocWriter {
 	}
 
 	private void addNormalTextParagraphs(List strList, int emptyLineInBetween, int emptyLineAfter,
-										 ParagraphAlignment alignment) {
+			ParagraphAlignment alignment) {
 		for (int i = 0; i < strList.size(); ++i) {
 			String str = ((String) strList.get(i)).trim();
 			if (str != null && !str.isEmpty()) {
@@ -621,100 +628,97 @@ public class AwardWriter extends DocWriter {
 		}
 		return toReturn;
 	}
-	
+
 	private String findAndCorrectMoneyFormats(String str) {
-        String toReturn = "";
-        Pattern pattern = Pattern.compile(
-                "(人民币)?[0-9.,，]+(万)?(亿)?元"
-                + "|" + "[0-9.,，]+(万)?(亿)?美元"
-                + "|" + "[0-9.,，]+(万)?(亿)?美金"
-                + "|" + "[0-9.,，]+(万)?(亿)?欧元");
-        Matcher matcher = pattern.matcher(str);
+		String toReturn = "";
+		Pattern pattern = Pattern.compile("(人民币)?[0-9.,，]+(万)?(亿)?元" + "|" + "[0-9.,，]+(万)?(亿)?美元" + "|"
+				+ "[0-9.,，]+(万)?(亿)?美金" + "|" + "[0-9.,，]+(万)?(亿)?欧元");
+		Matcher matcher = pattern.matcher(str);
 
-        List<MoneyString> moneyStrList = new LinkedList<>();
-        while (matcher.find()) {
-            String match = matcher.group();
-            int start = matcher.start();
-            int end = matcher.end();
-            while (match.startsWith("，")) {
-                match = match.substring(1);
-                ++start;
-            }
-            moneyStrList.add(new MoneyString(start, end, match));
-//            System.out.println(str.substring(start, end));
-        }
+		List<MoneyString> moneyStrList = new LinkedList<>();
+		while (matcher.find()) {
+			String match = matcher.group();
+			int start = matcher.start();
+			int end = matcher.end();
+			while (match.startsWith("，")) {
+				match = match.substring(1);
+				++start;
+			}
+			moneyStrList.add(new MoneyString(start, end, match));
+			// System.out.println(str.substring(start, end));
+		}
 
-        for (int i = moneyStrList.size() - 1; i >= 0; --i) {
-            int start = moneyStrList.get(i).getStart();
-            int end = moneyStrList.get(i).getEnd();
-            String moneyStr = moneyStrList.get(i).getMoneyString();
-            StringBuilder tmpStrBuilder = new StringBuilder();
-            tmpStrBuilder.append(moneyStr);
-            tmpStrBuilder.append("->");
-            /// Extract only number part and format it
-            Pattern p = Pattern.compile("[0-9.,，]+");
-            Matcher m = p.matcher(moneyStr);
-            /// Should only be one and only one match!
-            if (m.find()) {
-                String num = m.group();
-                int s = m.start();
-                int e = m.end();
-                moneyStr = replaceStr(moneyStr, s, e, correctNumberFormat(num));
-            }
-            if (moneyStr.matches("[0-9.,，]+(万)?元")) {
-                moneyStr = "人民币" + moneyStr;
-            }
-            str = replaceStr(str, start, end, moneyStr);
-            str = str.replaceAll("万元、人民币","万元、");
-            tmpStrBuilder.append(moneyStr);
-        }
+		for (int i = moneyStrList.size() - 1; i >= 0; --i) {
+			int start = moneyStrList.get(i).getStart();
+			int end = moneyStrList.get(i).getEnd();
+			String moneyStr = moneyStrList.get(i).getMoneyString();
+			StringBuilder tmpStrBuilder = new StringBuilder();
+			tmpStrBuilder.append(moneyStr);
+			tmpStrBuilder.append("->");
+			/// Extract only number part and format it
+			Pattern p = Pattern.compile("[0-9.,，]+");
+			Matcher m = p.matcher(moneyStr);
+			/// Should only be one and only one match!
+			if (m.find()) {
+				String num = m.group();
+				int s = m.start();
+				int e = m.end();
+				moneyStr = replaceStr(moneyStr, s, e, correctNumberFormat(num));
+			}
+			if (moneyStr.matches("[0-9.,，]+(万)?元")) {
+				moneyStr = "人民币" + moneyStr;
+			}
+			str = replaceStr(str, start, end, moneyStr);
+			str = str.replaceAll("万元、人民币", "万元、");
+			tmpStrBuilder.append(moneyStr);
+		}
 
-        return str;
-    }
-	
+		return str;
+	}
+
 	private class MoneyString {
 
-        private final int start;
-        private final int end;
-        private final String moneyString;
+		private final int start;
+		private final int end;
+		private final String moneyString;
 
-        public MoneyString(int start, int end, String moneyString) {
-            this.start = start;
-            this.end = end;
-            this.moneyString = moneyString;
-        }
+		public MoneyString(int start, int end, String moneyString) {
+			this.start = start;
+			this.end = end;
+			this.moneyString = moneyString;
+		}
 
-        public int getStart() {
-            return start;
-        }
+		public int getStart() {
+			return start;
+		}
 
-        public int getEnd() {
-            return end;
-        }
+		public int getEnd() {
+			return end;
+		}
 
-        public String getMoneyString() {
-            return moneyString;
-        }
-    }
-	
+		public String getMoneyString() {
+			return moneyString;
+		}
+	}
+
 	private String correctNumberFormat(String s) {
-        s = removeAllCommas(s);
-        int backIdx = s.contains(".") ? s.indexOf(".") - 1 : s.length() - 1;
-        backIdx -= 3;
-        while (backIdx >= 0) {
-            s = replaceStr(s, backIdx + 1, backIdx + 1, ",");
-            backIdx -= 3;
-        }
-        return s;
-    }
-	
+		s = removeAllCommas(s);
+		int backIdx = s.contains(".") ? s.indexOf(".") - 1 : s.length() - 1;
+		backIdx -= 3;
+		while (backIdx >= 0) {
+			s = replaceStr(s, backIdx + 1, backIdx + 1, ",");
+			backIdx -= 3;
+		}
+		return s;
+	}
+
 	private String removeAllCommas(String str) {
-        return str.replaceAll("[,，]", "");
-    }
-	
+		return str.replaceAll("[,，]", "");
+	}
+
 	private String replaceStr(String baseStr, int startIdx, int endIdx, String str) {
-        String firstPart = baseStr.substring(0, startIdx);
-        String secondPart = baseStr.substring(endIdx);
-        return firstPart + str + secondPart;
-    }
+		String firstPart = baseStr.substring(0, startIdx);
+		String secondPart = baseStr.substring(endIdx);
+		return firstPart + str + secondPart;
+	}
 }
