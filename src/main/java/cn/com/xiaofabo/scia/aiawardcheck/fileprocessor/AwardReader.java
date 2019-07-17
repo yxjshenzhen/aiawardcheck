@@ -50,7 +50,7 @@ public class AwardReader extends DocReader {
 	private static final String REGEX_ARBIOP_COUNTER_REQUEST_TEXT_TITLE = "）关于被申请人的仲裁反请求";
 	private static final String REGEX_ARBIOP_RESPONDENT_ABSENT_TEXT_TITLE = "）被申请人缺席的法律后果";
 
-	private static final String END = "独任仲裁员：";
+	private static final String END = "仲裁员：";
 
 	private final List<Party> partyList;
 
