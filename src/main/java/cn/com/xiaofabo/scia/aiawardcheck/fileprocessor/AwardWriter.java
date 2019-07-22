@@ -329,7 +329,7 @@ public class AwardWriter extends DocWriter {
 
 			if (i == list.size() - 1) {
 				paragraph.setAlignment(ParagraphAlignment.RIGHT);
-			}else {
+			} else {
 				paragraph.setAlignment(ParagraphAlignment.CENTER);
 			}
 			XWPFRun run = paragraph.createRun();
@@ -552,10 +552,18 @@ public class AwardWriter extends DocWriter {
 		tableRow.getCell(1).getCTTc().addNewTcPr().addNewTcW().setW(TABLE_VALUE_WIDTH);
 		paragraph = tableRow.getCell(1).addParagraph();
 		paragraph.setAlignment(ParagraphAlignment.LEFT);
-		paragraphRun = paragraph.createRun();
-		paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
-		paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
-		paragraphRun.setText(value);
+		String lines[] = value.split("\\r?\\n");
+		for (int i = 0; i < lines.length; ++i) {
+			if (lines[i].isEmpty() && i != lines.length - 1) {
+//				paragraphRun.addCarriageReturn();
+				paragraphRun.addBreak();
+				continue;
+			}
+			paragraphRun = paragraph.createRun();
+			paragraphRun.setFontFamily(FONT_FAMILY_FANGSONG);
+			paragraphRun.setFontSize(CN_FONT_SIZE_SAN);
+			paragraphRun.setText(lines[i]);
+		}
 	}
 
 	private void setTableRowContent(XWPFTableRow tableRow, String key) {
