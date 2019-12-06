@@ -6,7 +6,7 @@
 	<groupId>cn.com.xiaofabo.scia</groupId>
 	<artifactId>aiawardcheck</artifactId>
 	<version>0.9.3-SNAPSHOT</version>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 
 	<name>AIAwardCheck</name>
 
@@ -25,12 +25,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>org.springframework.boot</groupId>
-					<artifactId>spring-boot-starter-tomcat</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->

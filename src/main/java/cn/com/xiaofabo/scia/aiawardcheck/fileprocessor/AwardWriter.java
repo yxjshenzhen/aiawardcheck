@@ -4,12 +4,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import cn.com.xiaofabo.scia.aiawardcheck.util.CompareDiff;
 import org.apache.poi.wp.usermodel.HeaderFooterType;
 import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBody;
@@ -38,7 +38,6 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.STTblLayoutType;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Award;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Pair;
 import cn.com.xiaofabo.scia.aiawardcheck.entity.Party;
-import cn.com.xiaofabo.scia.aiawardcheck.entity.Routine;
 import org.springframework.util.CollectionUtils;
 
 public class AwardWriter extends DocWriter {
@@ -350,6 +349,7 @@ public class AwardWriter extends DocWriter {
 	}
 
 	private void addTextParagraph(String str, int emptyLineAfter, boolean bold, ParagraphAlignment alignment) {
+		String originStr = str;
 		str = findAndCorrectMoneyFormats(str);
 		XWPFParagraph paragraph = awardDoc.createParagraph();
 
@@ -365,50 +365,32 @@ public class AwardWriter extends DocWriter {
 
 		paragraph.setAlignment(alignment);
 		paragraph.setFirstLineIndent(CN_FONT_SIZE_SAN * 2 * 20);
-		XWPFRun run = paragraph.createRun();
-		run.setFontFamily(FONT_FAMILY_FANGSONG);
-		run.getCTR().getRPr().getRFonts().setAscii(FONT_FAMILY_TIME_NEW_ROMAN);
-		run.getCTR().getRPr().getRFonts().setHAnsi(FONT_FAMILY_TIME_NEW_ROMAN);
-		run.getCTR().getRPr().getRFonts().setEastAsia(FONT_FAMILY_FANGSONG);
-		run.setFontSize(CN_FONT_SIZE_SAN);
-		run.setBold(bold);
-		run.setText(str);
-		for (int i = 0; i < emptyLineAfter; ++i) {
-			run.addBreak();
-		}
-	}
 
-	private void addTextParagraph(String str, int emptyLineAfter, boolean bold) {
-		str = findAndCorrectMoneyFormats(str);
-		XWPFParagraph paragraph = awardDoc.createParagraph();
+		CompareDiff dmp = new CompareDiff();
+		LinkedList<CompareDiff.Diff> diffs = dmp.diff_main(originStr,str,false);
+		for (CompareDiff.Diff diff : diffs){
+			XWPFRun run = paragraph.createRun();
+			run.setFontFamily(FONT_FAMILY_FANGSONG);
+			run.getCTR().getRPr().getRFonts().setAscii(FONT_FAMILY_TIME_NEW_ROMAN);
+			run.getCTR().getRPr().getRFonts().setHAnsi(FONT_FAMILY_TIME_NEW_ROMAN);
+			run.getCTR().getRPr().getRFonts().setEastAsia(FONT_FAMILY_FANGSONG);
+			run.setFontSize(CN_FONT_SIZE_SAN);
+			run.setBold(bold);
+			if (!CompareDiff.Operation.EQUAL.equals(diff.operation)){
+				run.setColor("FF0000");
+				run.setText(diff.text);
 
-		CTPPr ppr = paragraph.getCTP().getPPr();
-		if (ppr == null) {
-			ppr = paragraph.getCTP().addNewPPr();
-		}
-		CTSpacing spacing = ppr.isSetSpacing() ? ppr.getSpacing() : ppr.addNewSpacing();
-		spacing.setBefore(BigInteger.valueOf(0L));
-		spacing.setAfter(BigInteger.valueOf(0L));
-		spacing.setLineRule(STLineSpacingRule.EXACT);
-		spacing.setLine(TEXT_LINE_SPACING);
-
-		paragraph.setAlignment(ParagraphAlignment.BOTH);
-		paragraph.setFirstLineIndent(CN_FONT_SIZE_SAN * 2 * 20);
-		XWPFRun run = paragraph.createRun();
-		run.setFontFamily(FONT_FAMILY_FANGSONG);
-		run.getCTR().getRPr().getRFonts().setAscii(FONT_FAMILY_TIME_NEW_ROMAN);
-		run.getCTR().getRPr().getRFonts().setHAnsi(FONT_FAMILY_TIME_NEW_ROMAN);
-		run.getCTR().getRPr().getRFonts().setEastAsia(FONT_FAMILY_FANGSONG);
-		run.setFontSize(CN_FONT_SIZE_SAN);
-		run.setBold(bold);
-		run.setText(str);
-		for (int i = 0; i < emptyLineAfter; ++i) {
-			run.addBreak();
+			} else {
+				run.setText(diff.text);
+			}
+			for (int i = 0; i < emptyLineAfter; ++i) {
+				run.addBreak();
+			}
 		}
 	}
 
 	private void addNormalTextParagraph(String str, int emptyLineAfter) {
-		addTextParagraph(str, emptyLineAfter, false);
+		addTextParagraph(str, emptyLineAfter, false, ParagraphAlignment.BOTH);
 	}
 
 	private void addNormalTextParagraphs(String str, int emptyLineInBetween, int emptyLineAfter) {
@@ -416,11 +398,11 @@ public class AwardWriter extends DocWriter {
 		for (int i = 0; i < lines.length; ++i) {
 			String line = lines[i].trim();
 			if (line != null && !line.isEmpty()) {
-				addTextParagraph(line, emptyLineInBetween, false);
+				addTextParagraph(line, emptyLineInBetween, false,ParagraphAlignment.BOTH);
 			}
 		}
 		for (int i = 0; i < emptyLineAfter; ++i) {
-			addTextParagraph("", emptyLineAfter - 1, false);
+			addTextParagraph("", emptyLineAfter - 1, false,ParagraphAlignment.BOTH);
 		}
 	}
 
@@ -441,16 +423,16 @@ public class AwardWriter extends DocWriter {
 		for (int i = 0; i < strList.size(); ++i) {
 			String str = ((String) strList.get(i)).trim();
 			if (str != null && !str.isEmpty()) {
-				addTextParagraph(str, emptyLineInBetween, false);
+				addTextParagraph(str, emptyLineInBetween, false,ParagraphAlignment.BOTH);
 			}
 		}
 		for (int i = 0; i < emptyLineAfter; ++i) {
-			addTextParagraph("", emptyLineAfter - 1, false);
+			addTextParagraph("", emptyLineAfter - 1, false,ParagraphAlignment.BOTH);
 		}
 	}
 
 	private void addTitleTextParagraph(String str, int emptyLineAfter) {
-		addTextParagraph(str, emptyLineAfter, true);
+		addTextParagraph(str, emptyLineAfter, true,ParagraphAlignment.BOTH);
 	}
 
 	private void addSubTitle(String str) {
